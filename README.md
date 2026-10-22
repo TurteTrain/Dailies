@@ -1,5 +1,10 @@
-# Amazing-Project
-name wip
+# Dailies
+
+
+Made by:
+Alexander Tuero
+Bernardo Lopez
+Cristian Ravelo
 
 ## Developer Set-Up
 To set up Django do
@@ -13,4 +18,4 @@ pip install -r requirements.txt
 cp .env.example .env     # then fill in .env with real values
 python manage.py migrate
 python manage.py runserver
-'''
+...
