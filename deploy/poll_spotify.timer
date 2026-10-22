@@ -1,0 +1,10 @@
+[Unit]
+Description=Poll Spotify listening history hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=poll_spotify.service
+
+[Install]
+WantedBy=timers.target
