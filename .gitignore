@@ -3,4 +3,4 @@ __pycache__/
 *pyc
 .env
 db.sqlite3
-node_mdodules
+node_modules
