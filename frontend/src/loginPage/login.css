@@ -100,3 +100,9 @@
     background: #EAEAEA;
     color: #676767;
 }
+
+.errorMessage{
+    color: #ff0000;
+    font-size: 19px;
+    font-weight: 600;
+}
