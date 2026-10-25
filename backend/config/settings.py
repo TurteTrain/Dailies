@@ -146,3 +146,11 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+# Extra stuff
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+}
+CSRF_TRUSTED_ORIGINS = ["http://127.0.0.1:5173"]
+
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://127.0.0.1:5173")

@@ -1,0 +1,144 @@
+.rw{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+}
+
+.rw-controls{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.rw-controls input[type="date"]{
+    height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+    border: 2px solid #eaeaea;
+    border-radius: 8px;
+    color: #191414;
+    background: #ffffff;
+}
+
+.rw-controls .hp-button:disabled{
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.rw-date{
+    font-size: 20px;
+    font-weight: 600;
+    color: #191414;
+}
+
+.rw-tz{
+    font-size: 14px;
+    font-weight: 400;
+    color: #797979;
+}
+
+.rw-empty{
+    color: #797979;
+}
+
+.rw-stats{
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+}
+
+.rw-stats div{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.rw-stats strong{
+    font-size: 40px;
+    line-height: 1.1;
+    color: #191414;
+}
+
+.rw-stats span{
+    color: #797979;
+    font-size: 14px;
+}
+
+.rw-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    width: 100%;
+    text-align: left;
+}
+
+.rw-card{
+    background: #f6f6f6;
+    border-radius: 10px;
+    padding: 16px;
+    min-width: 0;
+}
+
+.rw-card h3{
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #191414;
+}
+
+.rw-list{
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.rw-list li{
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.rw-bar{
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(30, 215, 96, 0.28);
+    border-radius: 6px;
+}
+
+.rw-row{
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 8px;
+    font-size: 15px;
+    color: #191414;
+}
+
+.rw-name{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rw-sub{
+    color: #797979;
+    font-size: 13px;
+}
+
+.rw-plays{
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+@media (max-width: 760px){
+    .rw-grid{
+        grid-template-columns: 1fr;
+    }
+}

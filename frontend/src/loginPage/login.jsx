@@ -1,5 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import './login.css'
+import { api } from '../api.js'
 
 import lock_icon from '../assets/lock.png'
 import email_icon from '../assets/mention.png'
@@ -16,36 +17,50 @@ const Login = ({ onSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [errorMessage, setErrMsg] = useState('');
-    const [success, setSuccess] = useState(false);
+    const [busy, setBusy] = useState(false);
 
-    //if the user changes input boxes it will clear error message
+    //focus the username box when the page loads or the mode changes
     useEffect(() => {
         userRef.current?.focus();
-    }, [])
-    useEffect(() => {
-        setErrMsg('');
-    }, [username, email, password])
-
-    //trying to capture the inputs
+    }, [action])
+    //trying to capture the inputs (changing an input also clears the error message)
     function get_username(e){
         setUsername(e.target.value);
+        setErrMsg('');
     }
     function get_email(e){
         setEmail(e.target.value);
+        setErrMsg('');
     }
     function get_password(e){
         setPassword(e.target.value);
+        setErrMsg('');
+    }
+
+    //sends the request to Django; on success Django has already created the session cookie
+    async function send(path, body){
+        setBusy(true);
+        try {
+            const user = await api(path, { method: 'POST', body });
+            onSuccess(user);
+        } catch (err) {
+            setErrMsg(err.message);
+        } finally {
+            setBusy(false);
+        }
     }
 
     //functions for button submission
     function check_sign_up(){
         if(action === "Sign Up"){
-            if(true) {
-                onSuccess({username, email})
+            if(!username.trim() || !password){
+                setErrMsg("Username and password are required");
             }
-            //FUTURE CHECK FOR VALID EMAIL?
+            else if(!email.includes("@")){
+                setErrMsg("Invalid Email");
+            }
             else{
-                setErrMsg("Invalid Email")
+                send('register', { username: username.trim(), email: email.trim(), password });
             }
         }
         else {
@@ -54,13 +69,11 @@ const Login = ({ onSuccess }) => {
     }
     function check_login(){
         if(action === "Login"){
-            if(email === "email@gmail.com" && password === "password"){
-                //accept, go to next page
-                //fetch username from email?
-                onSuccess({username: "insert username", email})
+            if(!username.trim() || !password){
+                setErrMsg("Username and password are required");
             }
             else{
-                setErrMsg("Invalid Email or Password")
+                send('login', { username: username.trim(), password });
             }
         }
         else{
@@ -77,18 +90,18 @@ const Login = ({ onSuccess }) => {
 
             {/*THIS SECTION IS TEXT INPUTS!!!!*/}
             <div className = "inputs">
+                <div className = "input">
+                    <img src={user_icon} alt="" />
+                    <input ref={userRef} type = "text" placeholder = "Username"
+                                value = {username} onChange = {get_username}/>
+                </div>
                 {action==="Login"? <div></div>:
                     <div className = "input">
-                        <img src={user_icon} alt="" />
-                        <input ref={userRef} type = "text" placeholder = "Username"
-                                value = {username} onChange = {get_username}/>
+                        <img src={email_icon} alt="" />
+                        <input type = "email" placeholder = "Email"
+                                        value = {email} onChange = {get_email}/>
                     </div>
                 }
-                <div className = "input">
-                    <img src={email_icon} alt="" />
-                    <input type = "email" placeholder = "Email"
-                                    value = {email} onChange = {get_email}/>
-                </div>
                 <div className = "input">
                     <img src={lock_icon} alt="" />
                     <input type = "password" placeholder = "Password"
@@ -98,8 +111,8 @@ const Login = ({ onSuccess }) => {
 
             {/*THIS SECTION IS THE BUTTONS!!!!*/}
             <div className = "submit-container">
-                <button className = {action==="Login"?"submit gray":"submit"} onClick = {check_sign_up}>Sign Up</button>
-                <button className = {action==="Sign Up"?"submit gray":"submit"} onClick = {check_login}>Login</button>
+                <button disabled = {busy} className = {action==="Login"?"submit gray":"submit"} onClick = {check_sign_up}>Sign Up</button>
+                <button disabled = {busy} className = {action==="Sign Up"?"submit gray":"submit"} onClick = {check_login}>Login</button>
             </div>
 
             {/*THIS SECTION IS THE ERROR MESSAGE FOR INVALID INPUTS!!!!*/}
