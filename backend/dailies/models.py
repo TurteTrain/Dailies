@@ -1,6 +1,9 @@
 from django.db import models
+from django.conf import settings
 
 class SpotifyUser(models.Model):
+    account = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   on_delete=models.CASCADE, related_name="spotify")
     spotify_id = models.CharField(max_length=64, unique=True)
     refresh_token = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)

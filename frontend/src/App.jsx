@@ -1,25 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import Login from './loginPage/login.jsx'
 import Homepage from './homepage/homepage.jsx'
+import { api } from './api.js'
 import './App.css'
 
 function App() {
+    // user is the object returned by Django: {id, username, is_staff, spotify_connected}
+    const [user, setUser] = useState(null)
+    const [loading, setLoading] = useState(true)
 
-    const [count, setCount] = useState(0);
+    // On page load, ask Django whether a session already exists (keeps you logged in on refresh,
+    // and after returning from the Spotify login redirect).
+    useEffect(() => {
+        async function restoreSession() {
+            try {
+                await api('csrf')
+                setUser(await api('me'))
+            } catch {
+                setUser(null) // 401/403 just means "not logged in"
+            } finally {
+                setLoading(false)
+            }
+        }
+        restoreSession()
+    }, [])
 
-    const [success, setSuccess] = useState(false);
-    const[userDetails, setUserDetails] = useState({});
+    async function logout() {
+        try {
+            await api('logout', { method: 'POST' })
+        } finally {
+            setUser(null)
+        }
+    }
 
-    function login_Success(userDetails){
-        setSuccess(true);
-        setUserDetails(userDetails);
+    if (loading) {
+        return <div className="container"><p>Loading...</p></div>
     }
 
     return (
         <div>
-            {/*If login successful then call login_success to set userdetails and then go to homepage*/}
-            {success ? <Homepage userDetails = {userDetails}/> : <Login onSuccess={login_Success}/>}
+            {user ? <Homepage user={user} onLogout={logout} /> : <Login onSuccess={setUser} />}
         </div>
     )
 }
