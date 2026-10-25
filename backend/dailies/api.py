@@ -5,10 +5,14 @@ from django.core.exceptions import ValidationError
 from django.db.models import Count
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from .models import Listen
+from .rewind import get_daily_rewind
+from datetime import date
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 def user_payload(u):
     return {"id": u.id, "username": u.username, "is_staff": u.is_staff,
@@ -72,3 +76,24 @@ def my_listens(request):
 def admin_users(request):
     users = User.objects.annotate(listen_count=Count("spotify__listen")).order_by("id")
     return Response([{**user_payload(u), "listen_count": u.listen_count} for u in users])
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def rewind(request):
+    tz_name = request.query_params.get("tz", "UTC")
+    try:
+        tz = ZoneInfo(tz_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return Response({"error": f"Unknown timezone: {tz_name}"}, status=400)
+    raw = request.query_params.get("date")
+    if raw:
+        try:
+            day = date.fromisoformat(raw)
+        except ValueError:
+            return Response({"error": "date must be a real date in YYYY-MM-DD format."}, status=400)
+    else:
+        day = timezone.now().astimezone(tz).date()
+    sp = getattr(request.user, "spotify", None)
+    if sp is None:
+        return Response({"connected": False})
+    return Response({"connected": True, **get_daily_rewind(sp, day, tz_name)})

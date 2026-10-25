@@ -30,3 +30,9 @@ def get_recently_played(access_token):
                      timeout=15, headers={"Authorization": f"Bearer {access_token}"})
     r.raise_for_status()
     return r.json()["items"]
+
+def get_artist(access_token, artist_id):
+    r = requests.get(f"{API}/artists/{artist_id}", timeout=15,
+                     headers={"Authorization": f"Bearer {access_token}"})
+    r.raise_for_status()
+    return r.json()

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import Rewind from '../rewind/Rewind.jsx'
 import './homepage.css'
 
 const Homepage = ({ user, onLogout }) => {
@@ -23,6 +24,13 @@ const Homepage = ({ user, onLogout }) => {
             </div>
 
             {error && <p className = "errorMessage">{error}</p>}
+
+            {/* The rewind only makes sense once Spotify is connected */}
+            {data && data.connected && (
+                <section className = "hp-section">
+                    <Rewind />
+                </section>
+            )}
 
             <section className = "hp-section">
                 <h2>Your listening history</h2>
