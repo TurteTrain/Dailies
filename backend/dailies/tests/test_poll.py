@@ -31,9 +31,10 @@ class PollHelpers:
     def setUp(self):
         SpotifyUser.objects.create(spotify_id="u1", refresh_token="RT")
 
-    def run_poll(self, items=ITEMS, artist_side_effect=None):
+    def run_poll(self, items=ITEMS, artist_side_effect=None, mood_available=False):
         genres = {"ar1": ["indie pop"], "ar2": []}
-        with mock.patch("dailies.spotify.refresh_access_token", return_value={"access_token": "AT"}), \
+        with mock.patch("dailies.mood.available", return_value=mood_available), \
+             mock.patch("dailies.spotify.refresh_access_token", return_value={"access_token": "AT"}), \
              mock.patch("dailies.spotify.get_recently_played", return_value=items), \
              mock.patch("dailies.spotify.get_artist",
                         side_effect=artist_side_effect or (lambda tok, aid: {"id": aid, "genres": genres.get(aid)})) as ga:
@@ -119,3 +120,59 @@ class GenreSourceTests(PollHelpers, TestCase):
             ga, _, _ = self.run_poll()
         self.assertEqual(ga.call_count, 2)
         self.assertEqual(Artist.objects.get(pk="ar1").genres, ["indie pop"])
+
+
+def fake_classify(states):
+    return [{"mood": "chill", "scores": {"chill": 0.8, "sad": 0.2}, "confidence": 0.8} for _ in states]
+
+
+class MoodTaggingTests(PollHelpers, TestCase):
+    """The mood step runs after genres, tags each track once, and never blocks saving listens."""
+
+    def run_with_mood(self, track_tags=None, track_tags_side_effect=None):
+        with mock.patch.dict(os.environ, {"LASTFM_API_KEY": "k"}), \
+             mock.patch("dailies.lastfm.top_tags", return_value=["indie pop"]), \
+             mock.patch("dailies.lastfm.track_top_tags", return_value=track_tags,
+                        side_effect=track_tags_side_effect) as tt, \
+             mock.patch("dailies.mood.classify", side_effect=fake_classify) as cl:
+            _, out, err = self.run_poll(mood_available=True)
+        return tt, cl, out, err
+
+    def test_tracks_are_tagged_with_song_and_artist_tags(self):
+        tt, cl, out, _ = self.run_with_mood(track_tags=["sad", "indie pop"])
+        self.assertIn("mood: tagged 2 tracks", out)
+        t1 = Track.objects.get(pk="t1")
+        self.assertEqual((t1.mood, t1.mood_confidence), ("chill", 0.8))
+        self.assertEqual(t1.mood_scores, {"chill": 0.8, "sad": 0.2})
+        self.assertIsNotNone(t1.mood_tagged_at)
+        states = cl.call_args.args[0]
+        self.assertIn("Tags: sad, indie pop", states[0])               # song tags first, deduped
+        self.assertEqual({c.args for c in tt.call_args_list}, {("Alpha", "Song A"), ("Beta", "Song B")})
+
+    def test_second_run_does_not_retag(self):
+        self.run_with_mood(track_tags=[])
+        _, cl, _, _ = self.run_with_mood(track_tags=[])
+        self.assertEqual(cl.call_count, 0)
+
+    def test_track_waits_until_its_artists_have_tags(self):
+        with mock.patch.dict(os.environ, {"LASTFM_API_KEY": "k"}), \
+             mock.patch("dailies.lastfm.top_tags", side_effect=requests.ConnectionError("down")), \
+             mock.patch("dailies.lastfm.track_top_tags", return_value=[]), \
+             mock.patch("dailies.mood.classify", side_effect=fake_classify) as cl:
+            self.run_poll(mood_available=True)
+        self.assertEqual(cl.call_count, 0)
+        self.assertIsNone(Track.objects.get(pk="t1").mood_tagged_at)
+
+    def test_lastfm_failure_leaves_track_for_retry(self):
+        _, cl, _, err = self.run_with_mood(track_tags_side_effect=requests.ConnectionError("down"))
+        self.assertEqual(cl.call_count, 0)
+        self.assertIsNone(Track.objects.get(pk="t1").mood_tagged_at)
+        self.assertEqual(Listen.objects.count(), 3)
+        self.assertIn("last.fm Song A", err)
+
+    def test_skipped_when_laya_not_installed(self):
+        with mock.patch("dailies.mood.classify") as cl:
+            _, out, _ = self.run_poll(mood_available=False)
+        self.assertEqual(cl.call_count, 0)
+        self.assertIn("laya not installed", out)
+        self.assertEqual(Listen.objects.count(), 3)

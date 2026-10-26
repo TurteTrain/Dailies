@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from django.db.models import Count, Sum
 
 from .models import Artist, Listen
+from .mood import MIN_CONFIDENCE
 
 
 def day_bounds(day: date, tz_name: str = "UTC"):
@@ -21,7 +22,8 @@ def get_daily_rewind(spotify_user, day: date, tz_name: str = "UTC", limit: int =
     listens = Listen.objects.filter(user=spotify_user, played_at__gte=start, played_at__lt=end)
 
     result = {"date": day.isoformat(), "timezone": tz_name, "total_plays": listens.count(),
-              "approx_minutes": 0, "top_tracks": [], "top_artists": [], "top_genres": []}
+              "approx_minutes": 0, "top_tracks": [], "top_artists": [], "top_genres": [],
+              "top_moods": [], "mood_of_the_day": None}
     if result["total_plays"] == 0:
         return result
 
@@ -61,4 +63,13 @@ def get_daily_rewind(spotify_user, day: date, tz_name: str = "UTC", limit: int =
         {"genre": g, "plays": n}
         for g, n in sorted(genre_plays.items(), key=lambda kv: (-kv[1], kv[0]))[:limit]
     ]
+
+    # Moods: each play counts toward its track's mood; low-confidence guesses are left out
+    mood_rows = (listens.filter(track__mood_confidence__gte=MIN_CONFIDENCE).exclude(track__mood="")
+                 .values("track__mood").annotate(plays=Count("id")).order_by("-plays", "track__mood"))
+    total = sum(r["plays"] for r in mood_rows)
+    result["top_moods"] = [{"mood": r["track__mood"], "plays": r["plays"],
+                            "share": round(r["plays"] / total, 3)} for r in mood_rows]
+    if result["top_moods"]:
+        result["mood_of_the_day"] = result["top_moods"][0]["mood"]
     return result
