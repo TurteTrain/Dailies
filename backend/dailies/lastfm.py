@@ -44,16 +44,25 @@ def clean_tags(tags, limit=5, min_count=40):
 def top_tags(artist_name, limit=5, min_count=40):
     """Genre-like tags for an artist. Returns None if no API key is configured,
     [] if Last.fm doesn't know the artist, and raises LastfmError / requests errors otherwise."""
+    return _get_tags({"method": "artist.gettoptags", "artist": artist_name}, limit, min_count)
+
+
+def track_top_tags(artist_name, track_name, limit=5, min_count=40):
+    """Tags for one song (often moods like "chill" or "sad"). Same return values as top_tags."""
+    return _get_tags({"method": "track.gettoptags", "artist": artist_name, "track": track_name},
+                     limit, min_count)
+
+
+def _get_tags(params, limit, min_count):
     key = os.environ.get("LASTFM_API_KEY")
     if not key:
         return None
     r = requests.get(API_URL, timeout=15, params={
-        "method": "artist.gettoptags", "artist": artist_name, "autocorrect": 1,
-        "api_key": key, "format": "json"})
+        **params, "autocorrect": 1, "api_key": key, "format": "json"})
     r.raise_for_status()
     data = r.json()
     if "error" in data:
-        if data["error"] == 6:                    # "artist not found"
+        if data["error"] == 6:                    # "artist/track not found"
             return []
         raise LastfmError(data["error"], data.get("message", ""))
     tags = (data.get("toptags") or {}).get("tag") or []

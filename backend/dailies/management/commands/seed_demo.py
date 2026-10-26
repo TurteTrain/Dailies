@@ -6,17 +6,17 @@ from django.utils import timezone
 
 from dailies.models import Artist, Listen, SpotifyUser, Track
 
-# (track name, artist name, genres)
-SAMPLE = [("Midnight Drive", "Neon Atlas", ["synthwave", "electropop"]),
-          ("Gator Country", "The Swamp Kings", ["southern rock"]),
-          ("Late Library", "Quiet Hours", ["lo-fi", "ambient"]),
-          ("Paynes Prairie", "Sunday Static", ["indie rock"]),
-          ("Cold Brew", "Morning Shift", ["lo-fi", "indie pop"]),
-          ("Campus Lights", "Orange & Blue", ["pop"]),
-          ("Bus Route 8", "The Commuters", ["indie rock", "indie pop"]),
-          ("Finals Week", "Redline", ["punk", "indie rock"]),
-          ("Sunset Lap", "Coastal Drive", ["synthwave"]),
-          ("Echo Hall", "Reverb Club", ["ambient", "electropop"])]
+# (track name, artist name, genres, mood). Moods are preset so the demo works without the model.
+SAMPLE = [("Midnight Drive", "Neon Atlas", ["synthwave", "electropop"], "dreamy"),
+          ("Gator Country", "The Swamp Kings", ["southern rock"], "energetic"),
+          ("Late Library", "Quiet Hours", ["lo-fi", "ambient"], "focused"),
+          ("Paynes Prairie", "Sunday Static", ["indie rock"], "chill"),
+          ("Cold Brew", "Morning Shift", ["lo-fi", "indie pop"], "chill"),
+          ("Campus Lights", "Orange & Blue", ["pop"], "happy"),
+          ("Bus Route 8", "The Commuters", ["indie rock", "indie pop"], "happy"),
+          ("Finals Week", "Redline", ["punk", "indie rock"], "angry"),
+          ("Sunset Lap", "Coastal Drive", ["synthwave"], "dreamy"),
+          ("Echo Hall", "Reverb Club", ["ambient", "electropop"], "sad")]
 
 
 class Command(BaseCommand):
@@ -32,13 +32,15 @@ class Command(BaseCommand):
         except SpotifyUser.DoesNotExist:
             raise CommandError("No SpotifyUser with that spotify_id. Connect Spotify first.")
         tracks = []
-        for i, (name, artist_name, genres) in enumerate(SAMPLE):
+        for i, (name, artist_name, genres, mood) in enumerate(SAMPLE):
             artist, _ = Artist.objects.get_or_create(
                 artist_id=f"seed_artist_{i}",
                 defaults={"name": artist_name, "genres": genres, "genres_fetched_at": timezone.now()})
             t, _ = Track.objects.get_or_create(
                 track_id=f"seed_{i}",
-                defaults={"name": name, "artist": artist_name, "duration_ms": 180000 + i * 5000})
+                defaults={"name": name, "artist": artist_name, "duration_ms": 180000 + i * 5000,
+                          "mood": mood, "mood_scores": {mood: 0.9}, "mood_confidence": 0.9,
+                          "mood_tagged_at": timezone.now()})
             t.artists.add(artist)
             tracks.append(t)
         now = timezone.now()

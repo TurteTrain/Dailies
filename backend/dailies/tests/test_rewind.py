@@ -98,6 +98,25 @@ class RewindTests(TestCase):
         self.assertEqual(len(get_daily_rewind(self.a, date(2026, 10, 19), limit=2)["top_tracks"]), 2)
 
 
+    def test_moods_weighted_by_plays_and_low_confidence_ignored(self):
+        Track.objects.filter(pk="t1").update(mood="chill", mood_confidence=0.9)
+        Track.objects.filter(pk="t2").update(mood="happy", mood_confidence=0.7)
+        Track.objects.filter(pk="t3").update(mood="sad", mood_confidence=0.2)    # too unsure
+        for minute in (0, 5, 10):
+            self._listen(self.a, self.t1, 2026, 10, 20, 12, minute)
+        self._listen(self.a, self.t2, 2026, 10, 20, 13, 0)
+        self._listen(self.a, self.t3, 2026, 10, 20, 14, 0)
+        r = get_daily_rewind(self.a, date(2026, 10, 20))
+        self.assertEqual(r["top_moods"], [{"mood": "chill", "plays": 3, "share": 0.75},
+                                          {"mood": "happy", "plays": 1, "share": 0.25}])
+        self.assertEqual(r["mood_of_the_day"], "chill")
+
+    def test_no_mood_when_tracks_not_tagged(self):
+        self._listen(self.a, self.t1, 2026, 10, 20, 12, 0)
+        r = get_daily_rewind(self.a, date(2026, 10, 20))
+        self.assertEqual((r["top_moods"], r["mood_of_the_day"]), ([], None))
+
+
 class RewindApiTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("u", password="Pass-word-123!")

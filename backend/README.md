@@ -164,3 +164,14 @@ Re-running `poll_spotify` is safe. A unique constraint skips duplicates, so each
 - Do not share secrets in the repo, chat, or screenshots. If a secret leaks, regenerate it in the Spotify dashboard (client secret) or generate a new `DJANGO_SECRET_KEY`.
 - Spotify refresh tokens are stored in the database. Treat database dumps as sensitive.
 - Before any public deployment, set `DEBUG=False` and configure `ALLOWED_HOSTS`.
+
+### 7. (Optional) AI mood of the day
+
+Each song gets a mood (happy, sad, chill, energetic, angry, romantic, focused, dreamy) from the open-source [Laya](https://huggingface.co/convaiinnovations/laya) decision model. Laya reads text, not audio: it sees the song name, artists, and Last.fm tags, so set `LASTFM_API_KEY` in `.env` for good results.
+
+```bash
+pip install -r requirements-ml.txt    # torch + laya; the first run also downloads ~1.6 GB of weights
+python manage.py poll_spotify         # tags up to 100 new songs per run, after their artists' tags are in
+```
+
+Without `requirements-ml.txt` installed, `poll_spotify` prints "laya not installed, skipping" and everything else works. Each song is tagged once. Guesses below 0.4 confidence are kept in the database but left out of the daily mood. The model needs about 2 GB of RAM, so on EC2 use a `t3.medium` or larger. It uses Laya's English checkpoint by default; set `LAYA_MODEL=multilingual` to switch. `python manage.py seed_demo <spotify_id>` creates demo songs that already have moods.
