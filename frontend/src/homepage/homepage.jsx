@@ -3,7 +3,7 @@ import { api } from '../api.js'
 import Rewind from '../rewind/Rewind.jsx'
 import './homepage.css'
 
-const Homepage = ({ user, onLogout }) => {
+const Homepage = ({ user, onLogout, onUserDeletion }) => {
 
     const [data, setData] = useState(null);          // {connected, total, listens: [...]}
     const [adminUsers, setAdminUsers] = useState(null);
@@ -15,6 +15,22 @@ const Homepage = ({ user, onLogout }) => {
             api('admin/users').then(setAdminUsers).catch((e) => setError(e.message));
         }
     }, [user.is_staff]);
+
+    //popup to confirm account deletion
+    function deletePopup(){
+        const confirm = window.confirm(
+            "Are you sure you want to delete your account?\n"
+            + "---\n"
+            + "This will delete your song history stored by Dailies.\n"
+            + "To use Dailies again another account will\n"
+            + "have to be created and linked to Spotify.\n"
+            + "---"
+        )
+        if(confirm){
+            //call delete function
+            onUserDeletion();
+        }
+    }
 
     return (
         <div className = "hp-container">
@@ -91,6 +107,9 @@ const Homepage = ({ user, onLogout }) => {
                     )}
                 </section>
             )}
+            <div className = "hp-footer">
+                <button className = "hp-button delete" onClick = {deletePopup}>Delete Account</button>
+            </div>
         </div>
     );
 
