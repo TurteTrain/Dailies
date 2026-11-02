@@ -71,6 +71,13 @@ def my_listens(request):
                      "listens": [{"played_at": l.played_at, "track": l.track.name,
                                   "artist": l.track.artist} for l in qs[:100]]})
 
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_user(request):
+    request.user.delete()
+    logout(request)
+    return Response(status=204)
+
 @api_view(["GET"])
 @permission_classes([IsAdminUser])       # non-admins get 403
 def admin_users(request):

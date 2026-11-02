@@ -34,13 +34,22 @@ function App() {
         }
     }
 
+    async function userDeletion(){
+        try{
+            await api('delete_user', { method: 'DELETE' })
+            setUser(null)
+        } catch(e){
+            window.alert("Account Deletion Failed: " + e.message)
+        }
+    }
+
     if (loading) {
         return <div className="container"><p>Loading...</p></div>
     }
 
     return (
         <div>
-            {user ? <Homepage user={user} onLogout={logout} /> : <Login onSuccess={setUser} />}
+            {user ? <Homepage user={user} onLogout={logout} onUserDeletion={userDeletion} /> : <Login onSuccess={setUser} />}
         </div>
     )
 }
