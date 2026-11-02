@@ -17,6 +17,7 @@ const shiftDay = (iso, delta) => {
     d.setDate(d.getDate() + delta)
     return toISO(d)
 }
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 const prettyDate = (iso) =>
     fromISO(iso).toLocaleDateString(undefined, {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -110,6 +111,9 @@ const Rewind = () => {
                     <div className = "rw-stats">
                         <div><strong>{data.total_plays}</strong><span>plays</span></div>
                         <div><strong>~{data.approx_minutes}</strong><span>minutes</span></div>
+                        {data.mood_of_the_day && (
+                            <div><strong>{capitalize(data.mood_of_the_day)}</strong><span>mood of the day</span></div>
+                        )}
                     </div>
                     <div className = "rw-grid">
                         <RankCard title = "Top songs" emptyText = "No songs."
@@ -121,6 +125,10 @@ const Rewind = () => {
                         <RankCard title = "Top genres" emptyText = "No genre data yet."
                             rows = {data.top_genres.map((g) => ({
                                 key: g.genre, primary: g.genre, plays: g.plays }))} />
+                        <RankCard title = "Moods" emptyText = "No mood data yet."
+                            rows = {(data.top_moods || []).map((m) => ({
+                                key: m.mood, primary: capitalize(m.mood),
+                                secondary: `${Math.round(m.share * 100)}%`, plays: m.plays }))} />
                     </div>
                 </>
             )}

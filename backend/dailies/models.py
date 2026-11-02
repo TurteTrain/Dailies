@@ -20,6 +20,11 @@ class Track(models.Model):
     artist = models.TextField()
     duration_ms = models.IntegerField()
     artists = models.ManyToManyField(Artist, related_name="tracks", blank=True)
+    # Filled in by the poller's mood step (dailies/mood.py). mood_tagged_at null = not tagged yet.
+    mood = models.CharField(max_length=32, blank=True, default="")
+    mood_scores = models.JSONField(default=dict, blank=True)     # {label: probability}
+    mood_confidence = models.FloatField(null=True, blank=True)
+    mood_tagged_at = models.DateTimeField(null=True, blank=True)
 
 class Listen(models.Model):
     user = models.ForeignKey(SpotifyUser, on_delete=models.CASCADE)

@@ -1,0 +1,3 @@
+# Optional: the AI mood model (dailies/mood.py). Large download (torch + ~1.6 GB of weights).
+# Install on the server that runs poll_spotify: pip install -r requirements-ml.txt
+laya==0.4.15

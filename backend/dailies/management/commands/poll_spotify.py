@@ -3,14 +3,17 @@ from datetime import datetime
 
 import requests
 from django.core.management.base import BaseCommand
+from django.db.models import Exists, OuterRef
 from django.utils import timezone
 
-from dailies import lastfm, spotify
+from dailies import lastfm, mood, spotify
 from dailies.models import Artist, Listen, SpotifyUser, Track
 
 # Spotify has no batch artist endpoint for dev-mode apps, so genres cost one request per artist.
 # Each artist is looked up once and cached in the database; cap the lookups per user per run.
 ARTIST_LOOKUPS_PER_RUN = 25
+# Each track's mood is tagged once. The cap keeps one run short (a Last.fm call per track).
+MOOD_TAGS_PER_RUN = 100
 
 
 class Command(BaseCommand):
@@ -56,6 +59,8 @@ class Command(BaseCommand):
 
             self.fetch_genres(access_token)
 
+        self.tag_moods()
+
     def fetch_genres(self, access_token):
         """Look up genres once per artist and cache them.
 
@@ -84,3 +89,36 @@ class Command(BaseCommand):
             artist.genres = genres
             artist.genres_fetched_at = timezone.now()
             artist.save(update_fields=["genres", "genres_fetched_at"])
+
+    def tag_moods(self):
+        """Tag each new track's mood once, after its artists' tags are in (they feed the model).
+        Skipped when the ML requirements aren't installed; untagged tracks are retried next run."""
+        if not mood.available():
+            self.stdout.write("mood: laya not installed, skipping (pip install -r requirements-ml.txt)")
+            return
+        untagged_artist = Track.artists.through.objects.filter(
+            track_id=OuterRef("pk"), artist__genres_fetched_at__isnull=True)
+        pending = list(Track.objects.filter(mood_tagged_at__isnull=True)
+                       .exclude(Exists(untagged_artist))
+                       .prefetch_related("artists")[:MOOD_TAGS_PER_RUN])
+        tracks, states = [], []
+        for track in pending:
+            tags = [g for a in track.artists.all() for g in a.genres]
+            try:
+                song_tags = lastfm.track_top_tags(track.artist.split(", ")[0], track.name) or []
+            except (requests.RequestException, lastfm.LastfmError) as e:
+                self.stderr.write(f"last.fm {track.name}: {e}")
+                continue                       # temporary failure: retry next run
+            tags = list(dict.fromkeys(song_tags + tags))      # song tags first, no duplicates
+            tracks.append(track)
+            states.append(mood.build_state(track.name, track.artist, tags))
+        if not tracks:
+            return
+        now = timezone.now()
+        for track, result in zip(tracks, mood.classify(states)):
+            track.mood = result["mood"]
+            track.mood_scores = result["scores"]
+            track.mood_confidence = result["confidence"]
+            track.mood_tagged_at = now
+        Track.objects.bulk_update(tracks, ["mood", "mood_scores", "mood_confidence", "mood_tagged_at"])
+        self.stdout.write(f"mood: tagged {len(tracks)} tracks")

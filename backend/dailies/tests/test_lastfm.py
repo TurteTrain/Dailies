@@ -29,6 +29,13 @@ class LastfmTests(SimpleTestCase):
         self.assertEqual((params["method"], params["artist"], params["format"]),
                          ("artist.gettoptags", "Cage The Elephant", "json"))
 
+    def test_track_tags_query_the_song(self):
+        with mock.patch("requests.get", return_value=reply(TAGS)) as g:
+            self.assertEqual(lastfm.track_top_tags("Alpha", "Song A"), ["alternative rock", "rock", "indie"])
+        params = g.call_args.kwargs["params"]
+        self.assertEqual((params["method"], params["artist"], params["track"]),
+                         ("track.gettoptags", "Alpha", "Song A"))
+
     def test_none_when_no_api_key(self):
         with mock.patch.dict(os.environ, {"LASTFM_API_KEY": ""}), mock.patch("requests.get") as g:
             self.assertIsNone(lastfm.top_tags("X"))
