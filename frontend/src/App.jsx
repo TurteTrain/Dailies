@@ -43,13 +43,21 @@ function App() {
         }
     }
 
+    async function adminDeletion(u){
+        try{
+            await api('delete_admin', {method: 'DELETE', body: {user_id: u.id}})
+        } catch(e){
+            window.alert("Account Deletion Failed: " + e.message)
+        }
+    }
+
     if (loading) {
         return <div className="container"><p>Loading...</p></div>
     }
 
     return (
         <div>
-            {user ? <Homepage user={user} onLogout={logout} onUserDeletion={userDeletion} /> : <Login onSuccess={setUser} />}
+            {user ? <Homepage user={user} onLogout={logout} onUserDeletion={userDeletion} onAdminDeletion={adminDeletion} /> : <Login onSuccess={setUser} />}
         </div>
     )
 }

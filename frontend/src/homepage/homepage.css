@@ -34,6 +34,14 @@
     color: #ffffff;
 }
 
+.hp-button.deleteS {
+    background: #FF0000;
+    color: #ffffff;
+    height: 30px;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
 .hp-button{
     display: inline-flex;
     justify-content: center;
