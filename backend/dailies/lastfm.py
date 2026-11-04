@@ -12,7 +12,7 @@ IGNORE = {
     "seen live", "favorites", "favourites", "favorite", "awesome", "love", "all", "good",
     "female vocalists", "male vocalists", "female vocalist", "male vocalist", "singer-songwriter",
     "american", "british", "uk", "usa", "canadian", "australian", "swedish", "german",
-    "albums i own", "under 2000 listeners", "spotify",
+    "albums i own", "under 2000 listeners", "spotify", "brony",
 }
 DECADE = re.compile(r"^(\d{2}|\d{4})'?s$")        # "90s", "2000s"
 

@@ -3,7 +3,7 @@ import { api } from '../api.js'
 import Rewind from '../rewind/Rewind.jsx'
 import './homepage.css'
 
-const Homepage = ({ user, onLogout, onUserDeletion }) => {
+const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
 
     const [data, setData] = useState(null);          // {connected, total, listens: [...]}
     const [adminUsers, setAdminUsers] = useState(null);
@@ -27,8 +27,20 @@ const Homepage = ({ user, onLogout, onUserDeletion }) => {
             + "---"
         )
         if(confirm){
-            //call delete function
             onUserDeletion();
+        }
+    }
+
+    function deletePopupAdmin(u){
+        const confirm = window.confirm(
+            "DELETE " + u.username + "?\n"
+            + "---\n"
+            + "THIS CANNOT BE UNDONE!\n"
+            + "MAKE SURE THIS IS THE ACCOUNT YOU INTENDED TO DELETE!\n"
+            + "---"
+        )
+        if(confirm){
+            onAdminDeletion(u);
         }
     }
 
@@ -90,7 +102,7 @@ const Homepage = ({ user, onLogout, onUserDeletion }) => {
                     {adminUsers && (
                         <table className = "hp-table">
                             <thead>
-                                <tr><th>ID</th><th>Username</th><th>Admin</th><th>Spotify</th><th>Listens</th></tr>
+                                <tr><th>ID</th><th>Username</th><th>Admin</th><th>Spotify</th><th>Listens</th><th>Deletion</th></tr>
                             </thead>
                             <tbody>
                                 {adminUsers.map((u) => (
@@ -100,6 +112,11 @@ const Homepage = ({ user, onLogout, onUserDeletion }) => {
                                         <td>{u.is_staff ? "yes" : "no"}</td>
                                         <td>{u.spotify_connected ? "connected" : "-"}</td>
                                         <td>{u.listen_count}</td>
+                                        <td>{!u.is_staff && (
+                                            <button className = "hp-button deleteS" onClick = {() => deletePopupAdmin(u)}>
+                                                delete
+                                            </button>
+                                        )}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -108,7 +125,7 @@ const Homepage = ({ user, onLogout, onUserDeletion }) => {
                 </section>
             )}
             <div className = "hp-footer">
-                <button className = "hp-button delete" onClick = {deletePopup}>Delete Account</button>
+                <button className = "hp-button delete" onClick = {deletePopup}>Delete {user.is_staff ? " Admin " : ""} Account</button>
             </div>
         </div>
     );

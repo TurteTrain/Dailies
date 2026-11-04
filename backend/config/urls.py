@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/login", api.login_view),
     path("api/logout", api.logout_view),
     path("api/delete_user", api.delete_user),
+    path("api/delete_admin", api.delete_admin),
     path("api/me", api.me),
     path("api/listens", api.my_listens),
     path("api/admin/users", api.admin_users),

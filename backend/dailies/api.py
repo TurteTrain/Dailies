@@ -6,6 +6,7 @@ from django.db.models import Count
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
@@ -71,13 +72,6 @@ def my_listens(request):
                      "listens": [{"played_at": l.played_at, "track": l.track.name,
                                   "artist": l.track.artist} for l in qs[:100]]})
 
-@api_view(["DELETE"])
-@permission_classes([IsAuthenticated])
-def delete_user(request):
-    request.user.delete()
-    logout(request)
-    return Response(status=204)
-
 @api_view(["GET"])
 @permission_classes([IsAdminUser])       # non-admins get 403
 def admin_users(request):
@@ -104,3 +98,19 @@ def rewind(request):
     if sp is None:
         return Response({"connected": False})
     return Response({"connected": True, **get_daily_rewind(sp, day, tz_name)})
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_user(request):
+    request.user.delete()
+    logout(request)
+    return Response(status=204)
+
+@api_view(["DELETE"])
+@permission_classes([IsAdminUser])
+def delete_admin(request):
+    target = get_object_or_404(User, id=request.data.get("user_id"))
+    if target.is_staff:
+        return Response({"error": "cannot delete admin accounts in this way."}, status=403)
+    target.delete()
+    return Response(status=204)
