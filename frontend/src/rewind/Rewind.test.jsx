@@ -13,8 +13,8 @@ const FULL = {
                { track_id: 't2', name: 'Cold Brew', artist: 'Morning Shift', plays: 2 }],
   top_artists: [{ artist_id: 'a1', name: 'Quiet Hours', plays: 3 }],
   top_genres: [{ genre: 'lo-fi', plays: 5 }],
-  top_moods: [{ mood: 'chill', plays: 4, share: 0.667 }, { mood: 'happy', plays: 2, share: 0.333 }],
-  mood_of_the_day: 'chill',
+  top_moods: [{ mood: 'calm', plays: 4, share: 0.667 }, { mood: 'upbeat', plays: 2, share: 0.333 }],
+  mood_of_the_day: 'calm',
 }
 const EMPTY = { connected: true, total_plays: 0, approx_minutes: 0, top_tracks: [], top_artists: [], top_genres: [] }
 
@@ -110,9 +110,9 @@ test('a slow response for an old day never overwrites the newer day', async () =
 test('shows the mood of the day and the mood mix', async () => {
   render(<Rewind />)
   expect(await screen.findByText('mood of the day')).toBeTruthy()
-  expect(screen.getAllByText('Chill').length).toBe(2)     // headline stat and Moods card row
+  expect(screen.getAllByText('Calm').length).toBe(2)     // headline stat and Moods card row
   expect(screen.getByText('67%')).toBeTruthy()
-  expect(screen.getByText('Happy')).toBeTruthy()
+  expect(screen.getByText('Upbeat')).toBeTruthy()
 })
 
 test('hides the mood stat and says so when no songs are tagged yet', async () => {

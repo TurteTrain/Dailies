@@ -167,11 +167,11 @@ Re-running `poll_spotify` is safe. A unique constraint skips duplicates, so each
 
 ### 7. (Optional) AI mood of the day
 
-Each song gets a mood (happy, sad, chill, energetic, angry, romantic, focused, dreamy) from the open-source [Laya](https://huggingface.co/convaiinnovations/laya) decision model. Laya reads text, not audio: it sees the song name, artists, and Last.fm tags, so set `LASTFM_API_KEY` in `.env` for good results.
+Each song gets a mood (happy, sad, chill, energetic, angry, romantic, focused, dreamy) from our own fine-tuned text model: [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) trained on 20,000 songs from the public [MuSe dataset](https://zenodo.org/record/4281165). It reads text, not audio: the song name, artists, and Last.fm tags, so set `LASTFM_API_KEY` in `.env` for good results. Training code and test results are in [`ml/mood/`](../ml/mood/README.md).
 
 ```bash
-pip install -r requirements-ml.txt    # torch + laya; the first run also downloads ~1.6 GB of weights
+pip install -r requirements-ml.txt    # onnxruntime + tokenizers, ~60 MB; no torch needed
 python manage.py poll_spotify         # tags up to 100 new songs per run, after their artists' tags are in
 ```
 
-Without `requirements-ml.txt` installed, `poll_spotify` prints "laya not installed, skipping" and everything else works. Each song is tagged once. Guesses below 0.4 confidence are kept in the database but left out of the daily mood. The model needs about 2 GB of RAM, so on EC2 use a `t3.medium` or larger. It uses Laya's English checkpoint by default; set `LAYA_MODEL=multilingual` to switch. `python manage.py seed_demo <spotify_id>` creates demo songs that already have moods.
+The model ships in the repo as a 23 MB int8 ONNX file (`dailies/mood_model/`) and uses about 100 MB of RAM, so it runs on the current 2 GB EC2 server. Without `requirements-ml.txt` installed, `poll_spotify` prints "mood: model not installed, skipping" and everything else works. Each song is tagged once. Guesses below 0.4 confidence are kept in the database but left out of the daily mood. `python manage.py seed_demo <spotify_id>` creates demo songs that already have moods.

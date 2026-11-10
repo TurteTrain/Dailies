@@ -94,7 +94,7 @@ class Command(BaseCommand):
         """Tag each new track's mood once, after its artists' tags are in (they feed the model).
         Skipped when the ML requirements aren't installed; untagged tracks are retried next run."""
         if not mood.available():
-            self.stdout.write("mood: laya not installed, skipping (pip install -r requirements-ml.txt)")
+            self.stdout.write("mood: model not installed, skipping (pip install -r requirements-ml.txt)")
             return
         untagged_artist = Track.artists.through.objects.filter(
             track_id=OuterRef("pk"), artist__genres_fetched_at__isnull=True)
