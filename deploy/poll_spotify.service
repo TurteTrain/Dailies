@@ -6,8 +6,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=ubuntu
-WorkingDirectory=/opt/dailies/backend
-ExecStart=/opt/dailies/venv/bin/python manage.py poll_spotify
-EnvironmentFile=/opt/dailies/backend/.env
+WorkingDirectory=/home/ubuntu/Dailies/backend
+ExecStart=/home/ubuntu/Dailies/venv/bin/python manage.py poll_spotify
+EnvironmentFile=/home/ubuntu/Dailies/backend/.env
 StandardOutput=journal
 StandardError=journal
