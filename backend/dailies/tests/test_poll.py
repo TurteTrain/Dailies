@@ -123,7 +123,7 @@ class GenreSourceTests(PollHelpers, TestCase):
 
 
 def fake_classify(states):
-    return [{"mood": "chill", "scores": {"chill": 0.8, "sad": 0.2}, "confidence": 0.8} for _ in states]
+    return [{"mood": "calm", "scores": {"calm": 0.8, "sad": 0.2}, "confidence": 0.8} for _ in states]
 
 
 class MoodTaggingTests(PollHelpers, TestCase):
@@ -142,8 +142,8 @@ class MoodTaggingTests(PollHelpers, TestCase):
         tt, cl, out, _ = self.run_with_mood(track_tags=["sad", "indie pop"])
         self.assertIn("mood: tagged 2 tracks", out)
         t1 = Track.objects.get(pk="t1")
-        self.assertEqual((t1.mood, t1.mood_confidence), ("chill", 0.8))
-        self.assertEqual(t1.mood_scores, {"chill": 0.8, "sad": 0.2})
+        self.assertEqual((t1.mood, t1.mood_confidence), ("calm", 0.8))
+        self.assertEqual(t1.mood_scores, {"calm": 0.8, "sad": 0.2})
         self.assertIsNotNone(t1.mood_tagged_at)
         states = cl.call_args.args[0]
         self.assertIn("Tags: sad, indie pop", states[0])               # song tags first, deduped
@@ -170,9 +170,9 @@ class MoodTaggingTests(PollHelpers, TestCase):
         self.assertEqual(Listen.objects.count(), 3)
         self.assertIn("last.fm Song A", err)
 
-    def test_skipped_when_laya_not_installed(self):
+    def test_skipped_when_mood_model_not_installed(self):
         with mock.patch("dailies.mood.classify") as cl:
             _, out, _ = self.run_poll(mood_available=False)
         self.assertEqual(cl.call_count, 0)
-        self.assertIn("laya not installed", out)
+        self.assertIn("mood: model not installed", out)
         self.assertEqual(Listen.objects.count(), 3)

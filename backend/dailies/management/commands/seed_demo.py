@@ -7,15 +7,15 @@ from django.utils import timezone
 from dailies.models import Artist, Listen, SpotifyUser, Track
 
 # (track name, artist name, genres, mood). Moods are preset so the demo works without the model.
-SAMPLE = [("Midnight Drive", "Neon Atlas", ["synthwave", "electropop"], "dreamy"),
-          ("Gator Country", "The Swamp Kings", ["southern rock"], "energetic"),
-          ("Late Library", "Quiet Hours", ["lo-fi", "ambient"], "focused"),
-          ("Paynes Prairie", "Sunday Static", ["indie rock"], "chill"),
-          ("Cold Brew", "Morning Shift", ["lo-fi", "indie pop"], "chill"),
-          ("Campus Lights", "Orange & Blue", ["pop"], "happy"),
-          ("Bus Route 8", "The Commuters", ["indie rock", "indie pop"], "happy"),
+SAMPLE = [("Midnight Drive", "Neon Atlas", ["synthwave", "electropop"], "calm"),
+          ("Gator Country", "The Swamp Kings", ["southern rock"], "upbeat"),
+          ("Late Library", "Quiet Hours", ["lo-fi", "ambient"], "calm"),
+          ("Paynes Prairie", "Sunday Static", ["indie rock"], "calm"),
+          ("Cold Brew", "Morning Shift", ["lo-fi", "indie pop"], "calm"),
+          ("Campus Lights", "Orange & Blue", ["pop"], "upbeat"),
+          ("Bus Route 8", "The Commuters", ["indie rock", "indie pop"], "upbeat"),
           ("Finals Week", "Redline", ["punk", "indie rock"], "angry"),
-          ("Sunset Lap", "Coastal Drive", ["synthwave"], "dreamy"),
+          ("Sunset Lap", "Coastal Drive", ["synthwave"], "calm"),
           ("Echo Hall", "Reverb Club", ["ambient", "electropop"], "sad")]
 
 

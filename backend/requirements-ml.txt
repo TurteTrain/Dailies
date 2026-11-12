@@ -1,3 +1,5 @@
-# Optional: the AI mood model (dailies/mood.py). Large download (torch + ~1.6 GB of weights).
-# Install on the server that runs poll_spotify: pip install -r requirements-ml.txt
-laya==0.4.15
+# Optional: the AI mood model (dailies/mood.py, a ~23 MB ONNX file in dailies/mood_model/).
+# Small: no torch needed. Install on the server that runs poll_spotify: pip install -r requirements-ml.txt
+numpy>=1.26
+onnxruntime==1.31.1
+tokenizers>=0.21
