@@ -1,9 +1,28 @@
+/* Daily rewind. Uses the page's own look (white card, #191414 text, light-gray cards, green
+   buttons) and the 3D scene is drawn on the same white, so it sits in the page with no box around it.
+   --mood-a / --mood-b come from scene/moods.js (set by Rewind.jsx), so the HTML matches the 3D colors. */
+
 .rw{
+    --mood-a: #1ed760;
+    --mood-b: #0b8f8f;
+    --ink: #191414;
+    --ink-dim: #797979;
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
     display: flex;
     flex-direction: column;
     gap: 14px;
     align-items: center;
     width: 100%;
+}
+
+/* ---------- Header: title, day picker, date (same styles as the rest of the page) ---------- */
+
+.rw-header{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
 }
 
 .rw-controls{
@@ -20,7 +39,7 @@
     font-size: 16px;
     border: 2px solid #eaeaea;
     border-radius: 8px;
-    color: #191414;
+    color: var(--ink);
     background: #ffffff;
 }
 
@@ -32,22 +51,66 @@
 .rw-date{
     font-size: 20px;
     font-weight: 600;
-    color: #191414;
+    color: var(--ink);
 }
 
 .rw-tz{
     font-size: 14px;
     font-weight: 400;
-    color: #797979;
+    color: var(--ink-dim);
 }
 
 .rw-empty{
-    color: #797979;
+    color: var(--ink-dim);
 }
 
-.rw-stats{
+/* ---------- Hero: the 3D scene with the big numbers on top ---------- */
+
+.rw-hero{
+    position: relative;
+    width: 100%;
+    min-height: 420px;
     display: flex;
-    gap: 40px;
+}
+
+.rw-canvas{
+    position: absolute !important;     /* the Canvas wrapper sets its own inline position */
+    inset: 0;
+}
+
+/* Shown instead of the 3D scene (reduced motion, no WebGL) and while three.js downloads */
+.rw-backdrop{
+    background: radial-gradient(circle at 50% 45%,
+        color-mix(in srgb, var(--mood-a) 30%, transparent),
+        color-mix(in srgb, var(--mood-b) 12%, transparent) 30%,
+        transparent 60%);
+}
+
+.rw-hero-content{
+    position: relative;                /* above the canvas */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;              /* let the mouse reach the canvas (parallax)... */
+}
+
+.rw-hero-content > *{
+    pointer-events: auto;              /* ...except on actual text */
+}
+
+.rw-status{
+    font-weight: 600;
+    color: var(--ink);
+}
+
+/* Big numbers at the bottom of the hero. The white halo keeps them readable over the ring. */
+.rw-stats{
+    margin-top: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 40px;
     justify-content: center;
 }
 
@@ -55,38 +118,66 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    animation: rw-rise 0.9s var(--ease-out) both;
 }
 
+.rw-stats div:nth-child(2){ animation-delay: 0.12s; }
+.rw-stats div:nth-child(3){ animation-delay: 0.24s; }
+
 .rw-stats strong{
-    font-size: 40px;
+    font-size: 44px;
     line-height: 1.1;
-    color: #191414;
+    font-weight: 800;
+    color: var(--ink);
+    text-shadow: 0 0 12px #fff, 0 0 24px #fff;
 }
 
 .rw-stats span{
-    color: #797979;
+    color: var(--ink-dim);
     font-size: 14px;
+    text-shadow: 0 0 8px #fff;
 }
+
+/* The mood word: a slowly moving gradient in the mood's colors */
+.rw-mood strong{
+    background: linear-gradient(100deg, var(--mood-a), var(--mood-b), var(--mood-a));
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    animation: rw-shimmer 4s linear infinite;
+}
+
+/* ---------- Cards (same light-gray cards as before, with a mood tint) ---------- */
 
 .rw-grid{
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
     width: 100%;
     text-align: left;
 }
 
 .rw-card{
-    background: #f6f6f6;
-    border-radius: 10px;
-    padding: 16px;
     min-width: 0;
+    padding: 16px;
+    border-radius: 10px;
+    background: #f6f6f6;
+    animation: rw-card-in 0.7s var(--ease-out) both;
+    animation-delay: calc(0.2s + var(--order, 0) * 0.08s);
+    transition: transform 0.25s var(--ease-out), box-shadow 0.25s;
+}
+
+.rw-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--mood-b) 60%, transparent);
 }
 
 .rw-card h3{
     margin: 0 0 10px;
     font-size: 18px;
-    color: #191414;
+    color: var(--ink);
 }
 
 .rw-list{
@@ -104,11 +195,17 @@
     overflow: hidden;
 }
 
+/* Bars grow in from the left, one row after another */
 .rw-bar{
     position: absolute;
     inset: 0 auto 0 0;
-    background: rgba(30, 215, 96, 0.28);
     border-radius: 6px;
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--mood-a) 35%, transparent),
+        color-mix(in srgb, var(--mood-b) 20%, transparent));
+    transform-origin: left;
+    animation: rw-grow 0.9s var(--ease-out) both;
+    animation-delay: calc(0.35s + var(--order, 0) * 0.08s + var(--row, 0) * 0.06s);
 }
 
 .rw-row{
@@ -118,7 +215,7 @@
     gap: 10px;
     padding: 6px 8px;
     font-size: 15px;
-    color: #191414;
+    color: var(--ink);
 }
 
 .rw-name{
@@ -128,17 +225,46 @@
 }
 
 .rw-sub{
-    color: #797979;
+    color: var(--ink-dim);
     font-size: 13px;
 }
 
 .rw-plays{
     font-weight: 700;
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes rw-rise{
+    from{ opacity: 0; transform: translateY(20px) scale(0.92); filter: blur(6px); }
+    to{ opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes rw-card-in{
+    from{ opacity: 0; transform: translateY(20px); }
+    to{ opacity: 1; transform: none; }
+}
+
+@keyframes rw-grow{
+    from{ transform: scaleX(0); }
+    to{ transform: scaleX(1); }
+}
+
+@keyframes rw-shimmer{
+    to{ background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce){
+    .rw, .rw *{
+        animation: none !important;
+        transition: none !important;
+    }
 }
 
 @media (max-width: 760px){
-    .rw-grid{
-        grid-template-columns: 1fr;
-    }
+    .rw-hero{ min-height: 340px; }
+    .rw-grid{ grid-template-columns: 1fr; }
+    .rw-stats strong{ font-size: 34px; }
 }

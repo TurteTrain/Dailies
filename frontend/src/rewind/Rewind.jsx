@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { api } from '../api.js'
+import { moodStyle } from './scene/moods.js'
+import useCan3D from './useCan3D.js'
 import './rewind.css'
 import { RewindSummary } from './RewindSummary.jsx'
+
+// three.js is big, so it downloads only when the 3D scene is actually shown
+const RewindScene = lazy(() => import('./scene/RewindScene.jsx'))
 
 // The browser's timezone decides which calendar day a play belongs to.
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -23,6 +28,35 @@ const prettyDate = (iso) =>
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     })
 
+// One ranked card (top songs / artists / genres) with a bar showing each row's share of the leader.
+// `order` staggers the cards' entrance animation.
+function RankCard({ title, rows, emptyText, order }) {
+    const max = Math.max(1, ...rows.map((r) => r.plays))
+    return (
+        <div className = "rw-card" style = {{ '--order': order }}>
+            <h3>{title}</h3>
+            {rows.length === 0 ? (
+                <p className = "rw-empty">{emptyText}</p>
+            ) : (
+                <ol className = "rw-list">
+                    {rows.map((r, i) => (
+                        <li key = {r.key} style = {{ '--row': i }}>
+                            <div className = "rw-bar" style = {{ width: `${(r.plays / max) * 100}%` }} />
+                            <div className = "rw-row">
+                                <span className = "rw-name">
+                                    {r.primary}
+                                    {r.secondary && <span className = "rw-sub"> {r.secondary}</span>}
+                                </span>
+                                <span className = "rw-plays">{r.plays}x</span>
+                            </div>
+                        </li>
+                    ))}
+                </ol>
+            )}
+        </div>
+    )
+}
+
 const Rewind = () => {
     const today = toISO(new Date())
     const [date, setDate] = useState(today)
@@ -40,6 +74,12 @@ const Rewind = () => {
 
     const loading = result === null || result.date !== date
     const data = !loading ? result.data : null
+    const hasPlays = Boolean(data && data.connected && data.total_plays > 0)
+    const mood = hasPlays ? data.mood_of_the_day : null
+    const show3D = useCan3D()
+
+    // The mood's colors also tint the page (CSS variables), so HTML and 3D match
+    const [moodA, moodB] = moodStyle(mood).colors
 
     function pickDate(e) {
         const v = e.target.value
@@ -47,36 +87,65 @@ const Rewind = () => {
     }
 
     return (
-        <section className = "rw">
-            <h2>Daily rewind</h2>
+        <section className = "rw" style = {{ '--mood-a': moodA, '--mood-b': moodB }}>
+            <header className = "rw-header">
+                <h2>Daily rewind</h2>
 
-            <div className = "rw-controls">
-                <button className = "hp-button gray" onClick = {() => setDate(shiftDay(date, -1))}>
-                    &lsaquo; Previous
-                </button>
-                <input type = "date" value = {date} max = {today} onChange = {pickDate}
-                       aria-label = "Rewind date" />
-                <button className = "hp-button gray" disabled = {date >= today}
-                        onClick = {() => setDate(shiftDay(date, 1))}>
-                    Next &rsaquo;
-                </button>
-                {date !== today && (
-                    <button className = "hp-button" onClick = {() => setDate(today)}>Today</button>
+                <div className = "rw-controls">
+                    <button className = "hp-button gray" onClick = {() => setDate(shiftDay(date, -1))}>
+                        &lsaquo; Previous
+                    </button>
+                    <input type = "date" value = {date} max = {today} onChange = {pickDate}
+                           aria-label = "Rewind date" />
+                    <button className = "hp-button gray" disabled = {date >= today}
+                            onClick = {() => setDate(shiftDay(date, 1))}>
+                        Next &rsaquo;
+                    </button>
+                    {date !== today && (
+                        <button className = "hp-button" onClick = {() => setDate(today)}>Today</button>
+                    )}
+                </div>
+
+                <p className = "rw-date">{prettyDate(date)} <span className = "rw-tz">({TZ})</span></p>
+            </header>
+
+            <div className = "rw-hero">
+                {show3D ? (
+                    <Suspense fallback = {<div className = "rw-canvas rw-backdrop" />}>
+                        <RewindScene mood = {mood} plays = {hasPlays ? data.total_plays : 0}
+                                     tracks = {hasPlays ? data.top_tracks : []}
+                                     dayKey = {loading ? 'loading' : date} />
+                    </Suspense>
+                ) : (
+                    <div className = "rw-canvas rw-backdrop" aria-hidden = "true" />
                 )}
+
+                <div className = "rw-hero-content">
+                    {loading && <p className = "rw-status">Loading...</p>}
+                    {!loading && result.error && <p className = "errorMessage">{result.error}</p>}
+
+                    {data && data.connected === false && (
+                        <p className = "rw-status">Connect your Spotify account to see your rewind.</p>
+                    )}
+
+                    {data && data.connected && data.total_plays === 0 && (
+                        <p className = "rw-status rw-empty">No listening recorded for this day.</p>
+                    )}
+
+                    {/* key = date: a new day remounts these, which replays their entrance animations */}
+                    {hasPlays && (
+                        <div className = "rw-stats" key = {date}>
+                            <div><strong>{data.total_plays}</strong><span>plays</span></div>
+                            <div><strong>~{data.approx_minutes}</strong><span>minutes</span></div>
+                            {mood && (
+                                <div className = "rw-mood">
+                                    <strong>{capitalize(mood)}</strong><span>mood of the day</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
-
-            <p className = "rw-date">{prettyDate(date)} <span className = "rw-tz">({TZ})</span></p>
-
-            {loading && <p>Loading...</p>}
-            {!loading && result.error && <p className = "errorMessage">{result.error}</p>}
-
-            {data && data.connected === false && (
-                <p>Connect your Spotify account to see your rewind.</p>
-            )}
-
-            {data && data.connected && data.total_plays === 0 && (
-                <p className = "rw-empty">No listening recorded for this day.</p>
-            )}
 
             {data && data.connected && data.total_plays > 0 && <RewindSummary data = {data} />}
         </section>
