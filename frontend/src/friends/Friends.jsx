@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
+import FriendDashboard from './FriendDashboard.jsx'
 import './friends.css'
 
 // One list of people. `action` (optional) renders a button for each row.
@@ -29,6 +30,7 @@ const Friends = ({ onBack }) => {
     const [username, setUsername] = useState('')
     const [notice, setNotice] = useState('')
     const [busy, setBusy] = useState(false)
+    const [viewing, setViewing] = useState(null)  // the friend whose dashboard is open
 
     useEffect(() => {
         api('friends').then(setData).catch((e) => setError(e.message))
@@ -66,6 +68,10 @@ const Friends = ({ onBack }) => {
         }
     }
 
+    if (viewing) {
+        return <FriendDashboard friend = {viewing} onBack = {() => setViewing(null)} />
+    }
+
     return (
         <div className = "hp-container">
             <div className = "hp-bar">
@@ -94,7 +100,11 @@ const Friends = ({ onBack }) => {
                                     onClick = {() => accept(p)}>Accept</button>
                         )} />
                     <PeopleList title = "Your friends" people = {data.friends}
-                        emptyText = "No friends yet. Send a request above!" />
+                        emptyText = "No friends yet. Send a request above!"
+                        action = {(p) => (
+                            <button className = "hp-button fr-small" aria-label = {`View ${p.username}'s dashboard`}
+                                    onClick = {() => setViewing(p)}>View dashboard</button>
+                        )} />
                     <PeopleList title = "Sent requests" people = {data.outgoing}
                         emptyText = "No requests waiting on a reply."
                         action = {() => <span className = "fr-wait">Waiting</span>} />

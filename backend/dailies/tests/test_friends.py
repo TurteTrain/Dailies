@@ -132,3 +132,87 @@ class FriendsApiTests(TestCase):
             Friendship.objects.create(from_user=self.alice, to_user=self.bob)
         with self.assertRaises(IntegrityError), transaction.atomic():
             Friendship.objects.create(from_user=self.alice, to_user=self.alice)
+
+
+class FriendRewindTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from dailies.models import Artist, Listen, SpotifyUser, Track
+        self.me = User.objects.create_user("me", password="pw-12345-x")
+        self.pal = User.objects.create_user("pal", password="pw-12345-x")
+        self.stranger = User.objects.create_user("stranger", password="pw-12345-x")
+        self.asked = User.objects.create_user("asked", password="pw-12345-x")
+        Friendship.objects.create(from_user=self.me, to_user=self.pal, status=Friendship.ACCEPTED)
+        Friendship.objects.create(from_user=self.asked, to_user=self.me)          # still pending
+
+        artist = Artist.objects.create(artist_id="ar1", name="Quiet Hours", genres=["lo-fi"])
+        track = Track.objects.create(track_id="t1", name="Late Library", artist="Quiet Hours",
+                                     duration_ms=180000, mood="calm", mood_confidence=0.9)
+        track.artists.set([artist])
+        old = Track.objects.create(track_id="t0", name="Last Week Song", artist="Quiet Hours",
+                                   duration_ms=180000)
+        old.artists.set([artist])
+        now = timezone.now()
+        self.sp = {u.username: SpotifyUser.objects.create(account=u, spotify_id=u.username,
+                                                          refresh_token="x")
+                   for u in (self.pal, self.stranger, self.asked)}
+        Listen.objects.create(user=self.sp["pal"], track=track, played_at=now)
+        Listen.objects.create(user=self.sp["pal"], track=old, played_at=now - timedelta(days=3))
+        Listen.objects.create(user=self.sp["stranger"], track=track, played_at=now)
+        self.client.force_login(self.me)
+
+    def get(self, user, query=""):
+        return self.client.get(f"/api/friends/{user.id}/rewind{query}")
+
+    def test_friend_summary_for_today(self):
+        r = self.get(self.pal)
+        self.assertEqual(r.status_code, 200)
+        d = r.json()
+        self.assertTrue(d["connected"])
+        self.assertEqual(d["username"], "pal")
+        self.assertEqual(d["total_plays"], 1)                       # last week's play is not included
+        self.assertEqual([t["name"] for t in d["top_tracks"]], ["Late Library"])
+        self.assertEqual([a["name"] for a in d["top_artists"]], ["Quiet Hours"])
+        self.assertEqual([g["genre"] for g in d["top_genres"]], ["lo-fi"])
+        self.assertEqual(d["mood_of_the_day"], "calm")
+
+    def test_works_from_either_side_of_the_friendship(self):
+        self.client.force_login(self.pal)
+        self.assertEqual(self.get(self.me).status_code, 200)        # me has no Spotify -> connected False
+        self.assertFalse(self.get(self.me).json()["connected"])
+
+    def test_non_friends_and_pending_and_unknown_all_get_the_same_404(self):
+        bodies = set()
+        for target_id in (self.stranger.id, self.asked.id, self.me.id, 999999):
+            r = self.client.get(f"/api/friends/{target_id}/rewind")
+            self.assertEqual(r.status_code, 404)
+            bodies.add(r.content)
+        self.assertEqual(len(bodies), 1)
+
+    def test_cannot_choose_a_past_day(self):
+        past = (self.get(self.pal, "?date=2020-01-01").json())
+        self.assertEqual(past["total_plays"], 1)                    # date parameter is ignored
+        self.assertNotEqual(past["date"], "2020-01-01")
+
+    def test_only_aggregated_fields_are_returned(self):
+        d = self.get(self.pal).json()
+        self.assertEqual(set(d), {"connected", "username", "date", "timezone", "total_plays",
+                                  "approx_minutes", "top_tracks", "top_artists", "top_genres",
+                                  "mood_of_the_day"})
+        self.assertNotIn("played_at", self.get(self.pal).content.decode())
+        self.assertEqual(set(d["top_tracks"][0]), {"track_id", "name", "artist", "plays"})
+
+    def test_friend_without_spotify_is_not_connected(self):
+        Friendship.objects.create(from_user=self.me, to_user=self.stranger, status=Friendship.ACCEPTED)
+        self.sp["stranger"].delete()
+        self.assertEqual(self.get(self.stranger).json(), {"connected": False, "username": "stranger"})
+
+    def test_read_only_and_login_required(self):
+        self.assertEqual(self.client.post(f"/api/friends/{self.pal.id}/rewind").status_code, 405)
+        self.assertEqual(self.client.delete(f"/api/friends/{self.pal.id}/rewind").status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.get(self.pal).status_code, 403)
+
+    def test_bad_timezone_is_rejected(self):
+        self.assertEqual(self.get(self.pal, "?tz=Mars/Base").status_code, 400)

@@ -19,4 +19,5 @@ urlpatterns = [
     path("api/friends", api.friends),
     path("api/friends/request", api.friend_request),
     path("api/friends/accept", api.friend_accept),
+    path("api/friends/<int:friend_id>/rewind", api.friend_rewind),
 ]
