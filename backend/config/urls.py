@@ -16,4 +16,7 @@ urlpatterns = [
     path("spotify/login", views.login),     # "Connect Spotify" button
     path("callback", views.callback),       # unchanged path, so your redirect URI stays valid
     path("api/rewind", api.rewind),
+    path("api/friends", api.friends),
+    path("api/friends/request", api.friend_request),
+    path("api/friends/accept", api.friend_accept),
 ]

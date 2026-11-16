@@ -37,3 +37,26 @@ class Listen(models.Model):
                                     name="unique_listen")
         ]
         indexes = [models.Index(fields=["user", "played_at"])]
+
+
+class Friendship(models.Model):
+    """One row per pair of users. It starts as a pending request (from_user -> to_user) and
+    becomes "accepted" when to_user accepts; after that the friendship is mutual and either
+    user is on either side of the row. api.py makes sure a pair never has two rows."""
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    STATUS_CHOICES = [(PENDING, "Pending"), (ACCEPTED, "Accepted")]
+
+    from_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                  related_name="friend_requests_sent")
+    to_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                                related_name="friend_requests_received")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["from_user", "to_user"], name="unique_friend_request"),
+            models.CheckConstraint(condition=~models.Q(from_user=models.F("to_user")),
+                                   name="no_self_friendship"),
+        ]

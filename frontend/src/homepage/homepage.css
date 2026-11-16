@@ -17,6 +17,11 @@
     align-items: center;
 }
 
+.hp-actions{
+    display: flex;
+    gap: 10px;
+}
+
 .hp-footer{
     display: flex;
     justify-content: center;

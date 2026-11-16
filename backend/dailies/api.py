@@ -2,7 +2,8 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db import transaction
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils import timezone
@@ -10,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from .models import Listen
+from .models import Friendship, Listen
 from .rewind import get_daily_rewind
 from datetime import date
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -114,3 +115,73 @@ def delete_admin(request):
         return Response({"error": "cannot delete admin accounts in this way."}, status=403)
     target.delete()
     return Response(status=204)
+
+
+# ---- Friends ----------------------------------------------------------------------------
+# Friendships are mutual and found by username. A request is a pending Friendship row;
+# accepting it makes the friendship mutual. One row per pair, whichever way it was sent.
+
+def _pair(a, b):
+    """The Friendship row between two users, in either direction (or None)."""
+    return Friendship.objects.filter(
+        Q(from_user=a, to_user=b) | Q(from_user=b, to_user=a)).first()
+
+def _friends_payload(user):
+    rows = Friendship.objects.filter(Q(from_user=user) | Q(to_user=user)).select_related(
+        "from_user", "to_user")
+    friends, incoming, outgoing = [], [], []
+    for f in rows:
+        other = f.to_user if f.from_user_id == user.id else f.from_user
+        entry = {"id": f.id, "user_id": other.id, "username": other.username}
+        if f.status == Friendship.ACCEPTED:
+            friends.append(entry)
+        elif f.to_user_id == user.id:
+            incoming.append(entry)
+        else:
+            outgoing.append(entry)
+    for group in (friends, incoming, outgoing):
+        group.sort(key=lambda e: e["username"].lower())
+    return {"friends": friends, "incoming": incoming, "outgoing": outgoing}
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def friends(request):
+    return Response(_friends_payload(request.user))
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def friend_request(request):
+    username = str(request.data.get("username", "")).strip()
+    if not username:
+        return Response({"error": "Enter a username."}, status=400)
+    target = User.objects.filter(username__iexact=username).first()
+    if target is None:
+        return Response({"error": f"No user named {username}."}, status=404)
+    if target.id == request.user.id:
+        return Response({"error": "You can't add yourself."}, status=400)
+
+    with transaction.atomic():
+        existing = _pair(request.user, target)
+        if existing is not None:
+            if existing.status == Friendship.ACCEPTED:
+                return Response({"error": f"You and {target.username} are already friends."}, status=409)
+            if existing.from_user_id == request.user.id:
+                return Response({"error": f"You already sent {target.username} a request."}, status=409)
+            # They already asked us: sending a request back means yes.
+            existing.status = Friendship.ACCEPTED
+            existing.save(update_fields=["status"])
+            return Response({"status": "accepted", **_friends_payload(request.user)})
+        Friendship.objects.create(from_user=request.user, to_user=target)
+    return Response({"status": "pending", **_friends_payload(request.user)}, status=201)
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def friend_accept(request):
+    # Only the person the request was sent to can accept it, and only while it is pending.
+    f = Friendship.objects.filter(id=request.data.get("request_id"), to_user=request.user,
+                                  status=Friendship.PENDING).first()
+    if f is None:
+        return Response({"error": "That friend request no longer exists."}, status=404)
+    f.status = Friendship.ACCEPTED
+    f.save(update_fields=["status"])
+    return Response(_friends_payload(request.user))

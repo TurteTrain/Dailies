@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import Rewind from '../rewind/Rewind.jsx'
+import Friends from '../friends/Friends.jsx'
 import './homepage.css'
 
 const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
@@ -8,6 +9,8 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
     const [data, setData] = useState(null);          // {connected, total, listens: [...]}
     const [adminUsers, setAdminUsers] = useState(null);
     const [error, setError] = useState('');
+    const [view, setView] = useState('dashboard');      // 'dashboard' | 'friends'
+    const [pendingCount, setPendingCount] = useState(0); // incoming friend requests, for the button badge
 
     useEffect(() => {
         api('listens').then(setData).catch((e) => setError(e.message));
@@ -15,6 +18,12 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
             api('admin/users').then(setAdminUsers).catch((e) => setError(e.message));
         }
     }, [user.is_staff]);
+
+    // Refresh the badge whenever we land on the dashboard (including coming back from Friends)
+    useEffect(() => {
+        if (view !== 'dashboard') return;
+        api('friends').then((d) => setPendingCount(d.incoming.length)).catch(() => {});
+    }, [view]);
 
     //popup to confirm account deletion
     function deletePopup(){
@@ -44,11 +53,23 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
         }
     }
 
+    if (view === 'friends') {
+        return <Friends onBack = {() => setView('dashboard')} />
+    }
+
     return (
         <div className = "hp-container">
             <div className = "hp-bar">
                 <h2>Signed in as {user.username}{user.is_staff ? " (admin)" : ""}</h2>
-                <button className = "hp-button gray" onClick = {onLogout}>Log out</button>
+                <div className = "hp-actions">
+                    <button className = "hp-button" onClick = {() => setView('friends')}>
+                        Friends
+                        {pendingCount > 0 && (
+                            <span className = "hp-badge" aria-label = {`${pendingCount} pending requests`}>{pendingCount}</span>
+                        )}
+                    </button>
+                    <button className = "hp-button gray" onClick = {onLogout}>Log out</button>
+                </div>
             </div>
 
             {error && <p className = "errorMessage">{error}</p>}
