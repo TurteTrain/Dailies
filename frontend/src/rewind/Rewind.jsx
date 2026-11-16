@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import { moodStyle } from './scene/moods.js'
 import useCan3D from './useCan3D.js'
 import './rewind.css'
+import { RewindSummary } from './RewindSummary.jsx'
 
 // three.js is big, so it downloads only when the 3D scene is actually shown
 const RewindScene = lazy(() => import('./scene/RewindScene.jsx'))
@@ -22,7 +23,6 @@ const shiftDay = (iso, delta) => {
     d.setDate(d.getDate() + delta)
     return toISO(d)
 }
-const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 const prettyDate = (iso) =>
     fromISO(iso).toLocaleDateString(undefined, {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -147,23 +147,7 @@ const Rewind = () => {
                 </div>
             </div>
 
-            {hasPlays && (
-                <div className = "rw-grid" key = {date}>
-                    <RankCard title = "Top songs" emptyText = "No songs." order = {0}
-                        rows = {data.top_tracks.map((t) => ({
-                            key: t.track_id, primary: t.name, secondary: t.artist, plays: t.plays }))} />
-                    <RankCard title = "Top artists" emptyText = "No artist data for this day yet." order = {1}
-                        rows = {data.top_artists.map((a) => ({
-                            key: a.artist_id, primary: a.name, plays: a.plays }))} />
-                    <RankCard title = "Top genres" emptyText = "No genre data yet." order = {2}
-                        rows = {data.top_genres.map((g) => ({
-                            key: g.genre, primary: g.genre, plays: g.plays }))} />
-                    <RankCard title = "Moods" emptyText = "No mood data yet." order = {3}
-                        rows = {(data.top_moods || []).map((m) => ({
-                            key: m.mood, primary: capitalize(m.mood),
-                            secondary: `${Math.round(m.share * 100)}%`, plays: m.plays }))} />
-                </div>
-            )}
+            {data && data.connected && data.total_plays > 0 && <RewindSummary data = {data} />}
         </section>
     )
 }

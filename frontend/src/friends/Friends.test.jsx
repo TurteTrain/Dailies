@@ -103,3 +103,69 @@ test('dashboard has a Friends button with a pending badge that opens the friends
   fireEvent.click(screen.getByText(/Back to dashboard/))
   expect(await screen.findByText('Your listening history')).toBeTruthy()
 })
+
+const DAY = {
+  connected: true, username: 'alice', date: '2026-11-14', timezone: 'UTC', total_plays: 4, approx_minutes: 12,
+  top_tracks: [{ track_id: 't1', name: 'Late Library', artist: 'Quiet Hours', plays: 3 }],
+  top_artists: [{ artist_id: 'a1', name: 'Quiet Hours', plays: 3 }],
+  top_genres: [{ genre: 'lo-fi', plays: 3 }],
+  mood_of_the_day: 'calm',
+}
+
+async function openAlice(dayBody = DAY, status = 200) {
+  state = { friends: [person(1, 'alice')], incoming: [], outgoing: [] }
+  const base = globalThis.fetch
+  globalThis.fetch = vi.fn(async (url, opts) => {
+    if (String(url).startsWith('/api/friends/101/rewind'))
+      { calls.push({ url: String(url), method: 'GET' }); return { ok: status < 400, status, json: async () => dayBody } }
+    return base(url, opts)
+  })
+  render(<Friends onBack = {() => {}} />)
+  fireEvent.click(await screen.findByLabelText("View alice's dashboard"))
+}
+
+test("viewing a friend shows today's top songs, artists, genres and mood", async () => {
+  await openAlice()
+  expect(await screen.findByText('Late Library')).toBeTruthy()
+  expect(screen.getByText("alice\u2019s dashboard")).toBeTruthy()
+  expect(screen.getByText('Top songs')).toBeTruthy()
+  expect(screen.getByText('Top artists')).toBeTruthy()
+  expect(screen.getByText('Top genres')).toBeTruthy()
+  expect(screen.getByText('Calm')).toBeTruthy()
+  expect(screen.getByText('mood of the day')).toBeTruthy()
+  const url = calls.find((c) => c.url.startsWith('/api/friends/101/rewind')).url
+  expect(url).toContain('tz=')
+  expect(url).not.toContain('date=')
+})
+
+test("a friend's dashboard is read-only: no date controls, history or account actions", async () => {
+  await openAlice()
+  await screen.findByText('Late Library')
+  expect(screen.queryByLabelText('Rewind date')).toBeNull()
+  expect(screen.queryByText(/Previous/)).toBeNull()
+  expect(screen.queryByText(/Next/)).toBeNull()
+  expect(screen.queryByText(/Delete/i)).toBeNull()
+  expect(screen.queryByText(/Log out/i)).toBeNull()
+  expect(screen.queryByText('Send request')).toBeNull()
+  expect(screen.queryByText('Accept')).toBeNull()
+  expect(screen.queryByText(/Remove|Unfriend/i)).toBeNull()
+  expect(screen.queryByRole('table')).toBeNull()
+  expect(screen.queryByText('Moods')).toBeNull()
+  // the only buttons are the way back
+  expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['\u2039 Back to friends'])
+})
+
+test('friend with no listening today and friend without Spotify show friendly messages', async () => {
+  await openAlice({ ...DAY, total_plays: 0, top_tracks: [], top_artists: [], top_genres: [] })
+  expect(await screen.findByText(/hasn.t listened to anything today/)).toBeTruthy()
+  cleanup()
+  await openAlice({ connected: false, username: 'alice' })
+  expect(await screen.findByText(/hasn.t connected Spotify yet/)).toBeTruthy()
+})
+
+test('server errors are shown and back returns to the friends list', async () => {
+  await openAlice({ error: 'Friend not found.' }, 404)
+  expect((await screen.findByRole('alert')).textContent).toBe('Friend not found.')
+  fireEvent.click(screen.getByText(/Back to friends/))
+  expect(await screen.findByText('Your friends')).toBeTruthy()
+})

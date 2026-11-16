@@ -185,3 +185,33 @@ def friend_accept(request):
     f.status = Friendship.ACCEPTED
     f.save(update_fields=["status"])
     return Response(_friends_payload(request.user))
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def friend_rewind(request, friend_id):
+    """Read-only view of a friend's rewind for TODAY. Deliberately narrow:
+    - only accepted friends can be viewed (anyone else gets the same 404, so this doesn't reveal
+      whether a user exists),
+    - the day is always "today" in the viewer's timezone; there is no date parameter,
+    - only the aggregated summary is returned, never individual listens or timestamps."""
+    me = request.user
+    is_friend = Friendship.objects.filter(status=Friendship.ACCEPTED).filter(
+        Q(from_user=me, to_user_id=friend_id) | Q(from_user_id=friend_id, to_user=me)).exists()
+    friend = User.objects.filter(id=friend_id).first() if is_friend else None
+    if friend is None:
+        return Response({"error": "Friend not found."}, status=404)
+
+    tz_name = request.query_params.get("tz", "UTC")
+    try:
+        tz = ZoneInfo(tz_name)
+    except (ZoneInfoNotFoundError, ValueError):
+        return Response({"error": f"Unknown timezone: {tz_name}"}, status=400)
+
+    sp = getattr(friend, "spotify", None)
+    if sp is None:
+        return Response({"connected": False, "username": friend.username})
+    full = get_daily_rewind(sp, timezone.now().astimezone(tz).date(), tz_name)
+    shared = ("date", "timezone", "total_plays", "approx_minutes",
+              "top_tracks", "top_artists", "top_genres", "mood_of_the_day")
+    return Response({"connected": True, "username": friend.username,
+                     **{k: full[k] for k in shared}})
