@@ -79,22 +79,27 @@ def admin_users(request):
     users = User.objects.annotate(listen_count=Count("spotify__listen")).order_by("id")
     return Response([{**user_payload(u), "listen_count": u.listen_count} for u in users])
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def rewind(request):
+def rewind_params(request):
+    """Shared by the personal and group rewind: (tz_name, day, error_response)."""
     tz_name = request.query_params.get("tz", "UTC")
     try:
         tz = ZoneInfo(tz_name)
     except (ZoneInfoNotFoundError, ValueError):
-        return Response({"error": f"Unknown timezone: {tz_name}"}, status=400)
+        return None, None, Response({"error": f"Unknown timezone: {tz_name}"}, status=400)
     raw = request.query_params.get("date")
     if raw:
         try:
-            day = date.fromisoformat(raw)
+            return tz_name, date.fromisoformat(raw), None
         except ValueError:
-            return Response({"error": "date must be a real date in YYYY-MM-DD format."}, status=400)
-    else:
-        day = timezone.now().astimezone(tz).date()
+            return None, None, Response({"error": "date must be a real date in YYYY-MM-DD format."}, status=400)
+    return tz_name, timezone.now().astimezone(tz).date(), None
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def rewind(request):
+    tz_name, day, error = rewind_params(request)
+    if error:
+        return error
     sp = getattr(request.user, "spotify", None)
     if sp is None:
         return Response({"connected": False})

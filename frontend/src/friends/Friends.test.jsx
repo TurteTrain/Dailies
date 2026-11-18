@@ -169,3 +169,12 @@ test('server errors are shown and back returns to the friends list', async () =>
   fireEvent.click(screen.getByText(/Back to friends/))
   expect(await screen.findByText('Your friends')).toBeTruthy()
 })
+
+test('long usernames render whole in every list', async () => {
+  const long = 'a_very_long_username_that_goes_on_and_on'
+  state = { friends: [person(1, long)], incoming: [person(2, long + '_in')], outgoing: [person(3, long + '_out')] }
+  render(<Friends onBack = {() => {}} />)
+  for (const name of [long, long + '_in', long + '_out']) {
+    expect((await screen.findByText(name)).className).toContain('fr-name')   // one text node, not split up
+  }
+})

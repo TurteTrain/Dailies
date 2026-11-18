@@ -23,7 +23,8 @@ const prettyDate = (iso) =>
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     })
 
-const Rewind = () => {
+// `endpoint` lets the same component show a group's rewind (e.g. 'groups/3/rewind').
+const Rewind = ({ endpoint = 'rewind', title = 'Daily rewind' }) => {
     const today = toISO(new Date())
     const [date, setDate] = useState(today)
     const [result, setResult] = useState(null)   // {date, data} or {date, error}
@@ -32,11 +33,11 @@ const Rewind = () => {
     // after the user has already clicked to another day.
     useEffect(() => {
         let ignore = false
-        api(`rewind?date=${date}&tz=${encodeURIComponent(TZ)}`)
+        api(`${endpoint}?date=${date}&tz=${encodeURIComponent(TZ)}`)
             .then((data) => { if (!ignore) setResult({ date, data }) })
             .catch((e) => { if (!ignore) setResult({ date, error: e.message }) })
         return () => { ignore = true }
-    }, [date])
+    }, [date, endpoint])
 
     const loading = result === null || result.date !== date
     const data = !loading ? result.data : null
@@ -48,7 +49,7 @@ const Rewind = () => {
 
     return (
         <section className = "rw">
-            <h2>Daily rewind</h2>
+            <h2>{title}</h2>
 
             <div className = "rw-controls">
                 <button className = "hp-button gray" onClick = {() => setDate(shiftDay(date, -1))}>
