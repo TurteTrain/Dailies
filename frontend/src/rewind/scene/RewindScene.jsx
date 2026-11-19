@@ -49,7 +49,7 @@ export default function RewindScene(props) {
     return (
         <Canvas className="rw-canvas" aria-hidden="true" dpr={[1, 1.75]} flat
                 camera={{ position: [0, 0, 12], fov: 45 }}
-                gl={{ antialias: false, powerPreference: 'high-performance' }}>
+                gl={{ antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: true }}>
             <Stage {...props} />
         </Canvas>
     )
