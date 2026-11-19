@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import Login from './loginPage/login.jsx'
 import Homepage from './homepage/homepage.jsx'
+import Entrypage from "./entrypage/entrypage.jsx";
 import { api } from './api.js'
 import './App.css'
 
@@ -9,6 +10,7 @@ function App() {
     // user is the object returned by Django: {id, username, is_staff, spotify_connected}
     const [user, setUser] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [view, setView] = useState('entry')
 
     // On page load, ask Django whether a session already exists (keeps you logged in on refresh,
     // and after returning from the Spotify login redirect).
@@ -57,7 +59,9 @@ function App() {
 
     return (
         <div>
-            {user ? <Homepage user={user} onLogout={logout} onUserDeletion={userDeletion} onAdminDeletion={adminDeletion} /> : <Login onSuccess={setUser} />}
+            {user ? (<Homepage user={user} onLogout={logout} onUserDeletion={userDeletion} onAdminDeletion={adminDeletion} />)
+                : view === "login"? (<Login onSuccess={setUser} />)
+                : (<Entrypage onSignIn={() => setView('login')} />)}
         </div>
     )
 }
