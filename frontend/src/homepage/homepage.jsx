@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import Rewind from '../rewind/Rewind.jsx'
 import Friends from '../friends/Friends.jsx'
 import './homepage.css'
+import html2canvas from "html2canvas";
 
 const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
 
@@ -11,6 +12,8 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
     const [error, setError] = useState('');
     const [view, setView] = useState('dashboard');      // 'dashboard' | 'friends'
     const [pendingCount, setPendingCount] = useState(0); // incoming friend requests, for the button badge
+    const printRef = React.useRef(); // for image downloading
+
 
     useEffect(() => {
         api('listens').then(setData).catch((e) => setError(e.message));
@@ -24,6 +27,53 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
         if (view !== 'dashboard') return;
         api('friends').then((d) => setPendingCount(d.incoming.length)).catch(() => {});
     }, [view]);
+
+    const handleDownloadImage = async () => {
+        const element = printRef.current;
+        const canvas = await html2canvas(element, {
+           onclone: (doc) => {
+                const style = doc.createElement('style');
+                style.textContent = `
+                .rw * {
+                    animation: none !important;
+                    transition: none !important;
+                }
+    
+                .rw-stats div, .rw-card, .rw-bar {
+                    opacity: 1 !important;
+                    transform: none !important;
+                    filter: none !important;
+                }
+    
+                .rw-mood strong {
+                    background: none !important;
+                    color: #191414 !important;
+                }
+    
+                .rw-bar {
+                    background: #ccebd0 !important;
+                }
+            `;
+                doc.head.appendChild(style);
+            }
+        });
+
+        const data = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+
+        if (typeof link.download === 'string') {
+            link.href = data;
+            link.download = 'image.png';
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } else {
+            window.open(data);
+        }
+    };
+
+
 
     //popup to confirm account deletion
     function deletePopup(){
@@ -62,6 +112,9 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
             <div className = "hp-bar">
                 <h2>Signed in as {user.username}{user.is_staff ? " (admin)" : ""}</h2>
                 <div className = "hp-actions">
+                    <button className = "hp-button" onClick={handleDownloadImage}>
+                        To PNG
+                    </button>
                     <button className = "hp-button" onClick = {() => setView('friends')}>
                         Friends
                         {pendingCount > 0 && (
@@ -76,7 +129,7 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
 
             {/* The rewind only makes sense once Spotify is connected */}
             {data && data.connected && (
-                <section className = "hp-section">
+                <section className = "hp-section" ref={printRef}>
                     <Rewind />
                 </section>
             )}

@@ -57,6 +57,8 @@ function RankCard({ title, rows, emptyText, order }) {
     )
 }
 
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1)
+
 const Rewind = () => {
     const today = toISO(new Date())
     const [date, setDate] = useState(today)
