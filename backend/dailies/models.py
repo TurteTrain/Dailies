@@ -60,3 +60,34 @@ class Friendship(models.Model):
             models.CheckConstraint(condition=~models.Q(from_user=models.F("to_user")),
                                    name="no_self_friendship"),
         ]
+
+
+class Group(models.Model):
+    """A named group (names are NOT unique). Its rewind is the combined listening of its members."""
+    name = models.CharField(max_length=50)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                              related_name="owned_groups")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class GroupMembership(models.Model):
+    """One row per (group, user). The owner is created as a member; everyone else starts as
+    "invited" and becomes a "member" when they accept. joined_at matters: a member's listening
+    only counts toward the group from the day they joined onward."""
+    INVITED = "invited"
+    MEMBER = "member"
+    STATUS_CHOICES = [(INVITED, "Invited"), (MEMBER, "Member")]
+
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+                             related_name="group_memberships")
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=INVITED)
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+                                   on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+    joined_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["group", "user"], name="unique_group_membership"),
+        ]

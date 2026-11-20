@@ -32,7 +32,7 @@
 
 .fr-grid{
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: minmax(0, 1fr);     /* one full-width card per row: names need room */
     gap: 16px;
     align-items: start;
 }
@@ -71,6 +71,7 @@
 
 .fr-list li{
     display: flex;
+    flex-wrap: wrap;            /* if a row is too narrow the button drops below the name */
     justify-content: space-between;
     align-items: center;
     gap: 8px;
@@ -80,8 +81,17 @@
 }
 
 .fr-name{
+    flex: 1 1 160px;            /* the name wraps to its own line before it gets squeezed below this */
+    min-width: 0;
+    text-align: left;
     font-weight: 600;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;  /* only splits inside a word if that word alone is wider than the row */
+}
+
+.fr-list li > button,
+.fr-list li > .fr-wait,
+.fr-list li > .gr-owner{
+    flex-shrink: 0;
 }
 
 .fr-small{

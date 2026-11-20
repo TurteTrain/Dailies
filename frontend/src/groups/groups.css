@@ -1,0 +1,183 @@
+.gr-form{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.gr-form h3{
+    margin: 0;
+}
+
+.gr-form > input[type="text"],
+.gr-add-row input{
+    height: 44px;
+    padding: 0 12px;
+    font-size: 16px;
+    border: 2px solid #eaeaea;
+    border-radius: 8px;
+    color: #191414;
+    background: #ffffff;
+    box-sizing: border-box;
+}
+
+.gr-add-row{
+    display: flex;
+    gap: 8px;
+}
+
+.gr-add-row input{
+    flex: 1;
+    min-width: 0;
+}
+
+.gr-hint,
+.gr-sub,
+.gr-by,
+.gr-suggest-label{
+    margin: 0;
+    font-size: 13px;
+    color: #6b6b6b;
+    font-weight: 400;
+}
+
+.gr-chips,
+.gr-suggest{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.gr-invites{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gr-chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 50px;
+    background: #e6e6e6;
+    color: #191414;
+    font-size: 14px;
+    font-weight: 600;
+    border: 2px solid transparent;
+    font-family: inherit;
+}
+
+.gr-chip.friend{
+    background: #e5f6ec;
+    border-color: #14833b;
+}
+
+.gr-chip.suggest{
+    cursor: pointer;
+}
+
+.gr-chip.suggest:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.gr-x,
+.gr-plus{
+    border: none;
+    background: none;
+    padding: 0 0 0 4px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+}
+
+.gr-friend{
+    color: #14833b;
+    margin-right: 4px;
+}
+
+.gr-owner{
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    background: #191414;
+    border-radius: 50px;
+    padding: 2px 8px;
+}
+
+.gr-pending{
+    opacity: 0.75;
+}
+
+.gr-wide{
+    grid-column: 1 / -1;
+}
+
+.gr-members{
+    margin-bottom: 12px;
+}
+
+/* ---- Rows in the invitations / groups lists ----
+   Name + small detail line on the left, buttons on the right. Long names wrap on word
+   boundaries inside their own column; on narrow screens the buttons drop below. */
+.gr-row{
+    flex-wrap: wrap;
+    text-align: left;
+}
+
+.gr-info{
+    flex: 1 1 220px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gr-title{
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;      /* only breaks mid-word if a single word is wider than the row */
+}
+
+.gr-meta{
+    font-size: 13px;
+    color: #6b6b6b;
+}
+
+.gr-meta .gr-owner{
+    margin-left: 8px;
+}
+
+.gr-row .hp-button,
+.gr-btns{
+    flex-shrink: 0;
+}
+
+.gr-btns{
+    display: flex;
+    gap: 6px;
+}
+
+/* Group page header: the title may be long, the Back button must not be squeezed */
+.gr-head{
+    min-width: 0;
+    text-align: left;
+}
+
+.gr-head h2{
+    overflow-wrap: anywhere;
+}
+
+.gr-back{
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.gr-chip{
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { api } from '../api.js'
 import Rewind from '../rewind/Rewind.jsx'
 import Friends from '../friends/Friends.jsx'
+import Groups from '../groups/Groups.jsx'
 import './homepage.css'
 import html2canvas from "html2canvas";
 
@@ -10,10 +11,10 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
     const [data, setData] = useState(null);          // {connected, total, listens: [...]}
     const [adminUsers, setAdminUsers] = useState(null);
     const [error, setError] = useState('');
-    const [view, setView] = useState('dashboard');      // 'dashboard' | 'friends'
+    const [view, setView] = useState('dashboard');      // 'dashboard' | 'friends' | 'groups'
     const [pendingCount, setPendingCount] = useState(0); // incoming friend requests, for the button badge
     const printRef = React.useRef(); // for image downloading
-
+    const [inviteCount, setInviteCount] = useState(0);   // group invitations waiting for an answer
 
     useEffect(() => {
         api('listens').then(setData).catch((e) => setError(e.message));
@@ -26,6 +27,7 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
     useEffect(() => {
         if (view !== 'dashboard') return;
         api('friends').then((d) => setPendingCount(d.incoming.length)).catch(() => {});
+        api('groups').then((d) => setInviteCount(d.invites.length)).catch(() => {});
     }, [view]);
 
     const handleDownloadImage = async () => {
@@ -107,6 +109,10 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
         return <Friends onBack = {() => setView('dashboard')} />
     }
 
+    if (view === 'groups') {
+        return <Groups onBack = {() => setView('dashboard')} />
+    }
+
     return (
         <div className = "hp-container">
             <div className = "hp-bar">
@@ -119,6 +125,12 @@ const Homepage = ({ user, onLogout, onUserDeletion, onAdminDeletion }) => {
                         Friends
                         {pendingCount > 0 && (
                             <span className = "hp-badge" aria-label = {`${pendingCount} pending requests`}>{pendingCount}</span>
+                        )}
+                    </button>
+                    <button className = "hp-button" onClick = {() => setView('groups')}>
+                        Groups
+                        {inviteCount > 0 && (
+                            <span className = "hp-badge" aria-label = {`${inviteCount} group invitations`}>{inviteCount}</span>
                         )}
                     </button>
                     <button className = "hp-button gray" onClick = {onLogout}>Log out</button>

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Friendship, SpotifyUser, Track, Listen
+from .models import Friendship, Group, GroupMembership, SpotifyUser, Track, Listen
 
 @admin.register(SpotifyUser)
 class SpotifyUserAdmin(admin.ModelAdmin):
@@ -21,3 +21,13 @@ class ListenAdmin(admin.ModelAdmin):
 class FriendshipAdmin(admin.ModelAdmin):
     list_display = ("from_user", "to_user", "status", "created_at")
     list_filter = ("status",)
+
+
+class MembershipInline(admin.TabularInline):
+    model = GroupMembership
+    extra = 0
+
+@admin.register(Group)
+class GroupAdmin(admin.ModelAdmin):
+    list_display = ("name", "owner", "created_at")
+    inlines = [MembershipInline]
