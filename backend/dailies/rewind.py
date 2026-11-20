@@ -2,9 +2,9 @@ from collections import Counter
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 
-from .models import Artist, Listen
+from .models import Artist, GroupMembership, Listen
 from .mood import MIN_CONFIDENCE
 
 
@@ -20,7 +20,31 @@ def day_bounds(day: date, tz_name: str = "UTC"):
 def get_daily_rewind(spotify_user, day: date, tz_name: str = "UTC", limit: int = 5) -> dict:
     start, end = day_bounds(day, tz_name)
     listens = Listen.objects.filter(user=spotify_user, played_at__gte=start, played_at__lt=end)
+    return summarize_listens(listens, day, tz_name, limit)
 
+
+def get_group_rewind(group, day: date, tz_name: str = "UTC", limit: int = 5) -> dict:
+    """Every member's listening for `day`, merged into one rewind. A member only contributes
+    from the (calendar) day they joined onward, so nobody's earlier history is pulled in."""
+    start, end = day_bounds(day, tz_name)
+    tz = ZoneInfo(tz_name)
+    members = (GroupMembership.objects
+               .filter(group=group, status=GroupMembership.MEMBER, user__spotify__isnull=False)
+               .values_list("user__spotify", "joined_at"))
+    wanted = None
+    for spotify_pk, joined_at in members:
+        joined_day = joined_at.astimezone(tz).date()
+        if joined_day > day:
+            continue                                  # hadn't joined yet on this day
+        lower = max(start, day_bounds(joined_day, tz_name)[0])
+        clause = Q(user_id=spotify_pk, played_at__gte=lower, played_at__lt=end)
+        wanted = clause if wanted is None else wanted | clause
+    listens = Listen.objects.none() if wanted is None else Listen.objects.filter(wanted)
+    return summarize_listens(listens, day, tz_name, limit)
+
+
+def summarize_listens(listens, day: date, tz_name: str, limit: int = 5) -> dict:
+    """Turn a queryset of Listens (already limited to one day) into the rewind summary."""
     result = {"date": day.isoformat(), "timezone": tz_name, "total_plays": listens.count(),
               "approx_minutes": 0, "top_tracks": [], "top_artists": [], "top_genres": [],
               "top_moods": [], "mood_of_the_day": None}

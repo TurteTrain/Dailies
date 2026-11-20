@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from dailies import api, views
+from dailies import api, group_api, views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -20,4 +20,11 @@ urlpatterns = [
     path("api/friends/request", api.friend_request),
     path("api/friends/accept", api.friend_accept),
     path("api/friends/<int:friend_id>/rewind", api.friend_rewind),
+    path("api/groups", group_api.groups),
+    path("api/groups/invites/accept", group_api.invite_accept),
+    path("api/groups/invites/decline", group_api.invite_decline),
+    path("api/groups/<int:group_id>", group_api.group_detail),
+    path("api/groups/<int:group_id>/invite", group_api.group_invite),
+    path("api/groups/<int:group_id>/leave", group_api.group_leave),
+    path("api/groups/<int:group_id>/rewind", group_api.group_rewind),
 ]

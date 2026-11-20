@@ -27,39 +27,10 @@ const prettyDate = (iso) =>
     fromISO(iso).toLocaleDateString(undefined, {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     })
-
-// One ranked card (top songs / artists / genres) with a bar showing each row's share of the leader.
-// `order` staggers the cards' entrance animation.
-function RankCard({ title, rows, emptyText, order }) {
-    const max = Math.max(1, ...rows.map((r) => r.plays))
-    return (
-        <div className = "rw-card" style = {{ '--order': order }}>
-            <h3>{title}</h3>
-            {rows.length === 0 ? (
-                <p className = "rw-empty">{emptyText}</p>
-            ) : (
-                <ol className = "rw-list">
-                    {rows.map((r, i) => (
-                        <li key = {r.key} style = {{ '--row': i }}>
-                            <div className = "rw-bar" style = {{ width: `${(r.plays / max) * 100}%` }} />
-                            <div className = "rw-row">
-                                <span className = "rw-name">
-                                    {r.primary}
-                                    {r.secondary && <span className = "rw-sub"> {r.secondary}</span>}
-                                </span>
-                                <span className = "rw-plays">{r.plays}x</span>
-                            </div>
-                        </li>
-                    ))}
-                </ol>
-            )}
-        </div>
-    )
-}
-
 const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1)
 
-const Rewind = () => {
+// `endpoint` lets the same component show a group's rewind (e.g. 'groups/3/rewind').
+const Rewind = ({ endpoint = 'rewind', title = 'Daily rewind' }) => {
     const today = toISO(new Date())
     const [date, setDate] = useState(today)
     const [result, setResult] = useState(null)   // {date, data} or {date, error}
@@ -68,11 +39,11 @@ const Rewind = () => {
     // after the user has already clicked to another day.
     useEffect(() => {
         let ignore = false
-        api(`rewind?date=${date}&tz=${encodeURIComponent(TZ)}`)
+        api(`${endpoint}?date=${date}&tz=${encodeURIComponent(TZ)}`)
             .then((data) => { if (!ignore) setResult({ date, data }) })
             .catch((e) => { if (!ignore) setResult({ date, error: e.message }) })
         return () => { ignore = true }
-    }, [date])
+    }, [date, endpoint])
 
     const loading = result === null || result.date !== date
     const data = !loading ? result.data : null
@@ -91,7 +62,7 @@ const Rewind = () => {
     return (
         <section className = "rw" style = {{ '--mood-a': moodA, '--mood-b': moodB }}>
             <header className = "rw-header">
-                <h2>Daily rewind</h2>
+                <h2>{title}</h2>
 
                 <div className = "rw-controls">
                     <button className = "hp-button gray" onClick = {() => setDate(shiftDay(date, -1))}>
@@ -149,7 +120,8 @@ const Rewind = () => {
                 </div>
             </div>
 
-            {data && data.connected && data.total_plays > 0 && <RewindSummary data = {data} />}
+            {/* the hero above already shows plays / minutes / mood, so the summary is cards only */}
+            {hasPlays && <RewindSummary key = {date} data = {data} showStats = {false} />}
         </section>
     )
 }
